@@ -16,7 +16,7 @@ export function parseGenericPage(): CapturedContext {
 
   // Readability mutates the document, so we work on a clone.
   let bodyHtml: string;
-  let parserUsed: 'generic' = 'generic';
+  const parserUsed = 'generic' as const;
   let author: string | undefined;
   let publishedAt: string | undefined;
 
