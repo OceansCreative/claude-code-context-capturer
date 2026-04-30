@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.local
+.vite
+coverage/
+*.zip
+!claude-code-context-capturer-*.zip
+.claude/settings.local.json
