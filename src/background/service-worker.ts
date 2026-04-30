@@ -1,8 +1,11 @@
 import { buildFrontmatter, buildSourceFooter } from '@/shared/frontmatter-builder';
 import { loadOptions } from '@/shared/options-storage';
 import { appendToBuffer } from '@/shared/buffer-storage';
+import { buildEntryHeading } from '@/shared/file-appender';
 import type {
   CapturedContext,
+  OffscreenMessage,
+  OffscreenResult,
   RuntimeMessage,
   UserOptions,
 } from '@/shared/types';
@@ -157,6 +160,54 @@ async function deliver(
   if (options.defaultMode === 'append-buffer' || options.defaultMode === 'both') {
     await appendToBuffer(ctx, markdown);
   }
+  if (options.defaultMode === 'claude-md') {
+    await appendToClaudeMd(ctx, markdown);
+  }
+}
+
+/**
+ * Forward the rendered Markdown to the offscreen document, which holds the
+ * FileSystemFileHandle for the user-linked CLAUDE.md and performs the write.
+ */
+async function appendToClaudeMd(
+  ctx: CapturedContext,
+  markdown: string
+): Promise<void> {
+  await ensureOffscreen();
+  const heading = buildEntryHeading(ctx);
+  const message: OffscreenMessage = {
+    target: 'offscreen',
+    type: 'APPEND_TO_CLAUDE_MD',
+    content: markdown,
+    heading,
+  };
+  const result = (await chrome.runtime.sendMessage(message)) as OffscreenResult;
+  if (!result?.ok) {
+    // Throw so requestCapture's try/catch surfaces the error to the popup.
+    const reason = result?.reason ?? 'write-failed';
+    const detail = result?.message ?? 'Unknown error';
+    throw new Error(`${reason}: ${detail}`);
+  }
+}
+
+let creatingOffscreen: Promise<void> | null = null;
+
+async function ensureOffscreen(): Promise<void> {
+  if (await chrome.offscreen.hasDocument?.()) return;
+  if (creatingOffscreen) {
+    await creatingOffscreen;
+    return;
+  }
+  creatingOffscreen = chrome.offscreen
+    .createDocument({
+      url: 'src/offscreen/index.html',
+      reasons: [chrome.offscreen.Reason.BLOBS],
+      justification: 'Append captured Markdown to the user-linked CLAUDE.md file.',
+    })
+    .finally(() => {
+      creatingOffscreen = null;
+    });
+  await creatingOffscreen;
 }
 
 /**

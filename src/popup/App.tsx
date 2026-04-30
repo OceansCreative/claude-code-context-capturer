@@ -83,9 +83,18 @@ export default function App() {
         </p>
       )}
       {status === 'error' && errorMessage && (
-        <p className="mt-3 rounded bg-rose-50 px-2 py-1 text-xs text-rose-700">
-          {errorMessage}
-        </p>
+        <div className="mt-3 rounded bg-rose-50 px-2 py-1 text-xs text-rose-700">
+          <p>{errorMessage}</p>
+          {/no-handle|permission-denied/.test(errorMessage) && (
+            <button
+              type="button"
+              onClick={openOptions}
+              className="mt-1 underline hover:text-rose-900"
+            >
+              Open settings to link / re-grant CLAUDE.md →
+            </button>
+          )}
+        </div>
       )}
 
       {buffer.length > 0 && (

@@ -11,17 +11,94 @@ import {
   exportBufferAsMarkdown,
   type BufferEntry,
 } from '@/shared/buffer-storage';
+import {
+  loadClaudeMdHandle,
+  saveClaudeMdHandle,
+  clearClaudeMdHandle,
+} from '@/shared/handle-store';
 import { DEFAULT_OPTIONS, type UserOptions, type OutputMode } from '@/shared/types';
+
+type LinkedFileState =
+  | { status: 'none' }
+  | { status: 'linked'; name: string; permission: PermissionState }
+  | { status: 'error'; message: string };
 
 export default function App() {
   const [options, setOptions] = useState<UserOptions>(DEFAULT_OPTIONS);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [buffer, setBuffer] = useState<BufferEntry[]>([]);
+  const [linkedFile, setLinkedFile] = useState<LinkedFileState>({ status: 'none' });
 
   useEffect(() => {
     void loadOptions().then(setOptions);
     void readBuffer().then(setBuffer);
+    void refreshLinkedFile();
   }, []);
+
+  async function refreshLinkedFile() {
+    try {
+      const handle = await loadClaudeMdHandle();
+      if (!handle) {
+        setLinkedFile({ status: 'none' });
+        return;
+      }
+      const perm = await handle.queryPermission({ mode: 'readwrite' });
+      setLinkedFile({ status: 'linked', name: handle.name, permission: perm });
+    } catch (err) {
+      setLinkedFile({
+        status: 'error',
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  async function handleLinkClaudeMd() {
+    if (!('showOpenFilePicker' in window)) {
+      alert('Your browser does not support the File System Access API.');
+      return;
+    }
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [
+          {
+            description: 'Markdown',
+            accept: { 'text/markdown': ['.md', '.markdown'] },
+          },
+        ],
+        multiple: false,
+      });
+      // Request readwrite up-front so subsequent appends from the offscreen
+      // doc don't fail the permission check (the offscreen doc has no user
+      // gesture and can't re-prompt).
+      const perm = await handle.requestPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') {
+        alert('Write permission was not granted.');
+        return;
+      }
+      await saveClaudeMdHandle(handle);
+      await refreshLinkedFile();
+    } catch (err) {
+      // AbortError (user closed the picker) is normal — ignore quietly.
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      alert(`Could not link file: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function handleUnlinkClaudeMd() {
+    await clearClaudeMdHandle();
+    await refreshLinkedFile();
+  }
+
+  async function handleRegrant() {
+    try {
+      const handle = await loadClaudeMdHandle();
+      if (!handle) return;
+      await handle.requestPermission({ mode: 'readwrite' });
+      await refreshLinkedFile();
+    } catch (err) {
+      alert(`Could not re-grant permission: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
 
   async function refreshBuffer() {
     setBuffer(await readBuffer());
@@ -73,8 +150,9 @@ export default function App() {
             className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
           >
             <option value="clipboard">Copy to clipboard</option>
-            <option value="append-buffer">Append to buffer</option>
-            <option value="both">Both</option>
+            <option value="append-buffer">Append to in-extension buffer</option>
+            <option value="claude-md">Append to linked CLAUDE.md file</option>
+            <option value="both">Clipboard + buffer</option>
           </select>
         </Field>
 
@@ -147,6 +225,79 @@ export default function App() {
             <span className="text-xs text-slate-500">Saved at {savedAt}</span>
           )}
         </div>
+      </section>
+
+      <section className="mb-10 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="mb-2 text-lg font-semibold">Linked CLAUDE.md file</h2>
+        <p className="mb-4 text-xs text-slate-500">
+          Pick a file once. Subsequent captures (when &ldquo;Append to linked
+          CLAUDE.md file&rdquo; is the default action) write directly to it —
+          no copy and paste.
+        </p>
+
+        {linkedFile.status === 'none' && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-500">No file linked yet.</span>
+            <button
+              type="button"
+              onClick={() => void handleLinkClaudeMd()}
+              className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+            >
+              Link CLAUDE.md…
+            </button>
+          </div>
+        )}
+
+        {linkedFile.status === 'linked' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm">
+                <span className="font-medium text-slate-900">{linkedFile.name}</span>
+                <span
+                  className={
+                    'ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ' +
+                    (linkedFile.permission === 'granted'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-amber-100 text-amber-700')
+                  }
+                >
+                  {linkedFile.permission === 'granted' ? 'write granted' : 'needs re-grant'}
+                </span>
+              </span>
+              <div className="flex gap-2">
+                {linkedFile.permission !== 'granted' && (
+                  <button
+                    type="button"
+                    onClick={() => void handleRegrant()}
+                    className="rounded border border-amber-300 px-3 py-1.5 text-xs text-amber-700 hover:bg-amber-50"
+                  >
+                    Re-grant write
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void handleLinkClaudeMd()}
+                  className="rounded border border-slate-300 px-3 py-1.5 text-xs hover:bg-slate-100"
+                >
+                  Replace
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleUnlinkClaudeMd()}
+                  className="rounded border border-rose-300 px-3 py-1.5 text-xs text-rose-700 hover:bg-rose-50"
+                >
+                  Unlink
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {linkedFile.status === 'error' && (
+          <p className="rounded bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            {linkedFile.message}
+          </p>
+        )}
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">

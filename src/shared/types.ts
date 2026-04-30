@@ -54,9 +54,11 @@ export interface UserOptions {
 export type OutputMode =
   /** Copy to system clipboard. */
   | 'clipboard'
-  /** Append to a hidden CLAUDE.md-style buffer in storage for later export. */
+  /** Append to a hidden CLAUDE.md-style buffer in chrome.storage. */
   | 'append-buffer'
-  /** Both clipboard and buffer. */
+  /** Append to the user-linked CLAUDE.md file on disk. */
+  | 'claude-md'
+  /** Clipboard + buffer. */
   | 'both';
 
 export const DEFAULT_OPTIONS: UserOptions = {
@@ -74,3 +76,25 @@ export type RuntimeMessage =
   | { type: 'CAPTURE_SELECTION' }
   | { type: 'CAPTURE_RESULT'; payload: CapturedContext }
   | { type: 'CAPTURE_ERROR'; error: string };
+
+/**
+ * Messages targeted at the offscreen document. The `target` field lets
+ * other contexts (popup, options) ignore them — runtime.sendMessage is broadcast.
+ */
+export type OffscreenMessage = {
+  target: 'offscreen';
+  type: 'APPEND_TO_CLAUDE_MD';
+  /** Pre-rendered Markdown body (frontmatter + body + footer). */
+  content: string;
+  /** Heading prefix line, e.g. `## 2026-04-30 22:35 — <title>`. */
+  heading: string;
+};
+
+/** Result returned from the offscreen document. */
+export type OffscreenResult =
+  | { ok: true; fileName: string }
+  | {
+      ok: false;
+      reason: 'no-handle' | 'permission-denied' | 'write-failed';
+      message: string;
+    };
