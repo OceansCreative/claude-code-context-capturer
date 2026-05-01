@@ -12,96 +12,136 @@ import {
   type BufferEntry,
 } from '@/shared/buffer-storage';
 import {
-  loadClaudeMdHandle,
-  saveClaudeMdHandle,
-  clearClaudeMdHandle,
+  listRoutes,
+  saveRoute,
+  deleteRoute,
 } from '@/shared/handle-store';
-import { DEFAULT_OPTIONS, type UserOptions, type OutputMode } from '@/shared/types';
+import {
+  DEFAULT_OPTIONS,
+  type ClaudeMdRoute,
+  type OutputMode,
+  type UserOptions,
+} from '@/shared/types';
 
-type LinkedFileState =
-  | { status: 'none' }
-  | { status: 'linked'; name: string; permission: PermissionState }
-  | { status: 'error'; message: string };
+interface RouteRow extends ClaudeMdRoute {
+  permission: PermissionState;
+}
 
 export default function App() {
   const [options, setOptions] = useState<UserOptions>(DEFAULT_OPTIONS);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [buffer, setBuffer] = useState<BufferEntry[]>([]);
-  const [linkedFile, setLinkedFile] = useState<LinkedFileState>({ status: 'none' });
+  const [routes, setRoutes] = useState<RouteRow[]>([]);
 
   useEffect(() => {
     void loadOptions().then(setOptions);
     void readBuffer().then(setBuffer);
-    void refreshLinkedFile();
+    void refreshRoutes();
   }, []);
 
-  async function refreshLinkedFile() {
-    try {
-      const handle = await loadClaudeMdHandle();
-      if (!handle) {
-        setLinkedFile({ status: 'none' });
-        return;
-      }
-      const perm = await handle.queryPermission({ mode: 'readwrite' });
-      setLinkedFile({ status: 'linked', name: handle.name, permission: perm });
-    } catch (err) {
-      setLinkedFile({
-        status: 'error',
-        message: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  async function handleLinkClaudeMd() {
-    if (!('showOpenFilePicker' in window)) {
-      alert('Your browser does not support the File System Access API.');
-      return;
-    }
-    try {
-      const [handle] = await window.showOpenFilePicker({
-        types: [
-          {
-            description: 'Markdown',
-            accept: { 'text/markdown': ['.md', '.markdown'] },
-          },
-        ],
-        multiple: false,
-      });
-      // Request readwrite up-front so subsequent appends from the offscreen
-      // doc don't fail the permission check (the offscreen doc has no user
-      // gesture and can't re-prompt).
-      const perm = await handle.requestPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') {
-        alert('Write permission was not granted.');
-        return;
-      }
-      await saveClaudeMdHandle(handle);
-      await refreshLinkedFile();
-    } catch (err) {
-      // AbortError (user closed the picker) is normal — ignore quietly.
-      if (err instanceof DOMException && err.name === 'AbortError') return;
-      alert(`Could not link file: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
-
-  async function handleUnlinkClaudeMd() {
-    await clearClaudeMdHandle();
-    await refreshLinkedFile();
-  }
-
-  async function handleRegrant() {
-    try {
-      const handle = await loadClaudeMdHandle();
-      if (!handle) return;
-      await handle.requestPermission({ mode: 'readwrite' });
-      await refreshLinkedFile();
-    } catch (err) {
-      alert(`Could not re-grant permission: ${err instanceof Error ? err.message : String(err)}`);
-    }
+  async function refreshRoutes() {
+    const list = await listRoutes();
+    const enriched: RouteRow[] = await Promise.all(
+      list.map(async (r) => ({
+        ...r,
+        permission: await r.handle.queryPermission({ mode: 'readwrite' }),
+      }))
+    );
+    setRoutes(enriched);
   }
 
   async function refreshBuffer() {
     setBuffer(await readBuffer());
+  }
+
+  async function handleAddRoute() {
+    if (!('showOpenFilePicker' in window)) {
+      alert('Your browser does not support the File System Access API.');
+      return;
+    }
+    let handle: FileSystemFileHandle;
+    try {
+      [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown'] } }],
+        multiple: false,
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      alert(`Could not pick file: ${err instanceof Error ? err.message : String(err)}`);
+      return;
+    }
+
+    const perm = await handle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') {
+      alert('Write permission was not granted.');
+      return;
+    }
+
+    const label = (prompt('Label for this route', handle.name) ?? '').trim() || handle.name;
+    const isFirst = routes.length === 0;
+    const patternInput = prompt(
+      isFirst
+        ? 'URL pattern (use * as wildcard). Leave empty to make this the default route for unmatched URLs.'
+        : 'URL pattern (use * as wildcard), e.g. github.com/anthropic/*',
+      ''
+    );
+    if (patternInput === null) return; // user cancelled
+    const pattern = patternInput.trim();
+    const isDefault = pattern === '';
+
+    // Demote any existing default if this route claims that role.
+    if (isDefault) {
+      for (const r of routes.filter((x) => x.isDefault)) {
+        await saveRoute({ ...r, isDefault: false });
+      }
+    }
+
+    const route: ClaudeMdRoute = {
+      id: crypto.randomUUID(),
+      label,
+      pattern,
+      isDefault,
+      createdAt: new Date().toISOString(),
+      handle,
+    };
+    await saveRoute(route);
+    await refreshRoutes();
+  }
+
+  async function handleRemoveRoute(id: string) {
+    if (!confirm('Remove this route? The file on disk is not deleted.')) return;
+    await deleteRoute(id);
+    await refreshRoutes();
+  }
+
+  async function handleRegrant(id: string) {
+    const r = routes.find((x) => x.id === id);
+    if (!r) return;
+    try {
+      await r.handle.requestPermission({ mode: 'readwrite' });
+      await refreshRoutes();
+    } catch (err) {
+      alert(`Could not re-grant: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function handleEditPattern(id: string) {
+    const r = routes.find((x) => x.id === id);
+    if (!r) return;
+    const next = prompt('New URL pattern (empty = default route)', r.pattern);
+    if (next === null) return;
+    const trimmed = next.trim();
+    const becomingDefault = trimmed === '';
+
+    if (becomingDefault && !r.isDefault) {
+      // Clear the existing default before promoting this one.
+      for (const other of routes.filter((x) => x.isDefault && x.id !== id)) {
+        await saveRoute({ ...other, isDefault: false });
+      }
+    }
+
+    await saveRoute({ ...r, pattern: trimmed, isDefault: becomingDefault });
+    await refreshRoutes();
   }
 
   async function handleSave() {
@@ -228,75 +268,90 @@ export default function App() {
       </section>
 
       <section className="mb-10 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-2 text-lg font-semibold">Linked CLAUDE.md file</h2>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">CLAUDE.md routes ({routes.length})</h2>
+          <button
+            type="button"
+            onClick={() => void handleAddRoute()}
+            className="rounded bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+          >
+            + Add route
+          </button>
+        </div>
         <p className="mb-4 text-xs text-slate-500">
-          Pick a file once. Subsequent captures (when &ldquo;Append to linked
-          CLAUDE.md file&rdquo; is the default action) write directly to it —
-          no copy and paste.
+          Each capture is appended to the first route whose URL pattern matches.
+          Mark a route as <em>default</em> (empty pattern) to catch unmatched URLs.
+          Use <code className="rounded bg-slate-100 px-1">*</code> as a wildcard,
+          e.g. <code className="rounded bg-slate-100 px-1">github.com/anthropic/*</code>.
         </p>
 
-        {linkedFile.status === 'none' && (
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500">No file linked yet.</span>
-            <button
-              type="button"
-              onClick={() => void handleLinkClaudeMd()}
-              className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
-            >
-              Link CLAUDE.md…
-            </button>
-          </div>
-        )}
-
-        {linkedFile.status === 'linked' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm">
-                <span className="font-medium text-slate-900">{linkedFile.name}</span>
-                <span
-                  className={
-                    'ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ' +
-                    (linkedFile.permission === 'granted'
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-amber-100 text-amber-700')
-                  }
-                >
-                  {linkedFile.permission === 'granted' ? 'write granted' : 'needs re-grant'}
-                </span>
-              </span>
-              <div className="flex gap-2">
-                {linkedFile.permission !== 'granted' && (
-                  <button
-                    type="button"
-                    onClick={() => void handleRegrant()}
-                    className="rounded border border-amber-300 px-3 py-1.5 text-xs text-amber-700 hover:bg-amber-50"
-                  >
-                    Re-grant write
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => void handleLinkClaudeMd()}
-                  className="rounded border border-slate-300 px-3 py-1.5 text-xs hover:bg-slate-100"
-                >
-                  Replace
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleUnlinkClaudeMd()}
-                  className="rounded border border-rose-300 px-3 py-1.5 text-xs text-rose-700 hover:bg-rose-50"
-                >
-                  Unlink
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {linkedFile.status === 'error' && (
-          <p className="rounded bg-rose-50 px-3 py-2 text-xs text-rose-700">
-            {linkedFile.message}
+        {routes.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            No routes linked yet. Captures with the &ldquo;Append to linked
+            CLAUDE.md file&rdquo; mode will fail until you add at least one.
           </p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {routes.map((r) => (
+              <li key={r.id} className="py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-900">{r.label}</span>
+                      {r.isDefault && (
+                        <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-700">
+                          default
+                        </span>
+                      )}
+                      <span
+                        className={
+                          'rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ' +
+                          (r.permission === 'granted'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-amber-100 text-amber-700')
+                        }
+                      >
+                        {r.permission === 'granted' ? 'write granted' : 'needs re-grant'}
+                      </span>
+                    </div>
+                    <div className="mt-1 truncate text-xs text-slate-500">
+                      <code className="rounded bg-slate-100 px-1">{r.handle.name}</code>
+                      {' · '}
+                      pattern:{' '}
+                      <code className="rounded bg-slate-100 px-1">
+                        {r.pattern || '(default)'}
+                      </code>
+                    </div>
+                  </div>
+                  <div className="flex flex-shrink-0 gap-2">
+                    {r.permission !== 'granted' && (
+                      <button
+                        type="button"
+                        onClick={() => void handleRegrant(r.id)}
+                        className="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50"
+                      >
+                        Re-grant
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void handleEditPattern(r.id)}
+                      className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100"
+                    >
+                      Edit pattern
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleRemoveRoute(r.id)}
+                      className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

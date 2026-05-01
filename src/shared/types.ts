@@ -78,12 +78,37 @@ export type RuntimeMessage =
   | { type: 'CAPTURE_ERROR'; error: string };
 
 /**
+ * One CLAUDE.md routing rule. Captures whose URL matches `pattern` are
+ * appended to the file held by `handle`. Exactly one route may be marked
+ * default — it catches captures that no other pattern matches.
+ */
+export interface ClaudeMdRoute {
+  /** Stable identifier (crypto.randomUUID). */
+  id: string;
+  /** User-visible label, e.g. "anthropic project". */
+  label: string;
+  /**
+   * Glob pattern matched against the full URL (substring + `*` wildcard).
+   * Empty when isDefault=true.
+   */
+  pattern: string;
+  /** True if this route receives captures that no pattern matches. */
+  isDefault: boolean;
+  /** ISO 8601 — used only to display "linked at …" in the UI. */
+  createdAt: string;
+  /** The actual on-disk file. */
+  handle: FileSystemFileHandle;
+}
+
+/**
  * Messages targeted at the offscreen document. The `target` field lets
  * other contexts (popup, options) ignore them — runtime.sendMessage is broadcast.
  */
 export type OffscreenMessage = {
   target: 'offscreen';
   type: 'APPEND_TO_CLAUDE_MD';
+  /** Which route's handle to write into. */
+  routeId: string;
   /** Pre-rendered Markdown body (frontmatter + body + footer). */
   content: string;
   /** Heading prefix line, e.g. `## 2026-04-30 22:35 — <title>`. */
@@ -95,6 +120,6 @@ export type OffscreenResult =
   | { ok: true; fileName: string }
   | {
       ok: false;
-      reason: 'no-handle' | 'permission-denied' | 'write-failed';
+      reason: 'no-handle' | 'permission-denied' | 'write-failed' | 'no-route';
       message: string;
     };

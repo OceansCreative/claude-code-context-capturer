@@ -56,6 +56,7 @@ I see the same.
   - その他のサイトは Mozilla Readability で本文抽出
 - **メタ情報の埋め込み**：URL・タイトル・取得日時を YAML frontmatter で付与
 - **CLAUDE.md への直書き** *(v0.2.0+)*：プロジェクトの `CLAUDE.md` を一度ピックすれば、以降のキャプチャは File System Access API 経由で自動 append。コピペ不要
+- **マルチプロジェクト振り分け** *(v0.3.0+)*：URL パターン（glob）で複数の CLAUDE.md を使い分け。例：`github.com/anthropic/*` → anthropic 用、`zenn.dev/*` → 個人メモ、無マッチは default ルート
 - **キャプチャバッファ**：複数ページをまとめて溜めて、後から一括エクスポート
 - **キーボードショートカット**：
   - `Ctrl+Shift+L`（macOS: `Cmd+Shift+L`）：ページ全体
@@ -203,6 +204,7 @@ This extension extracts **only the main content**, converts it to clean Markdown
 - **Site-specific parsers** for GitHub, Stack Overflow, Zenn, Qiita, MDN
 - **YAML frontmatter** with URL, title, captured_at, author, tags
 - **Direct CLAUDE.md write** *(v0.2.0+)* — Link a `CLAUDE.md` once via the File System Access API; subsequent captures append directly, no copy/paste
+- **Multi-project routing** *(v0.3.0+)* — Link multiple `CLAUDE.md` files with URL glob patterns. Captures from `github.com/anthropic/*` go to one file, `zenn.dev/*` to another, unmatched URLs to a default route
 - **Buffer mode** — Stack multiple captures and export all at once
 - **Keyboard shortcuts**:
   - `Ctrl+Shift+L` (Cmd+Shift+L on macOS) — capture page

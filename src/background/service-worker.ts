@@ -2,6 +2,8 @@ import { buildFrontmatter, buildSourceFooter } from '@/shared/frontmatter-builde
 import { loadOptions } from '@/shared/options-storage';
 import { appendToBuffer } from '@/shared/buffer-storage';
 import { buildEntryHeading } from '@/shared/file-appender';
+import { listRoutes } from '@/shared/handle-store';
+import { resolveRoute } from '@/shared/route-matcher';
 import type {
   CapturedContext,
   OffscreenMessage,
@@ -166,18 +168,30 @@ async function deliver(
 }
 
 /**
- * Forward the rendered Markdown to the offscreen document, which holds the
- * FileSystemFileHandle for the user-linked CLAUDE.md and performs the write.
+ * Resolve the right route for this capture's URL and forward the rendered
+ * Markdown to the offscreen document, which performs the FSA write.
  */
 async function appendToClaudeMd(
   ctx: CapturedContext,
   markdown: string
 ): Promise<void> {
+  const routes = await listRoutes();
+  if (routes.length === 0) {
+    throw new Error('no-route: No CLAUDE.md is linked. Configure routes in settings.');
+  }
+  const route = resolveRoute(ctx.url, routes);
+  if (!route) {
+    throw new Error(
+      `no-route: No route matches ${ctx.url}. Add a matching pattern or set a default route in settings.`
+    );
+  }
+
   await ensureOffscreen();
   const heading = buildEntryHeading(ctx);
   const message: OffscreenMessage = {
     target: 'offscreen',
     type: 'APPEND_TO_CLAUDE_MD',
+    routeId: route.id,
     content: markdown,
     heading,
   };

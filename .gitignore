@@ -8,4 +8,4 @@ dist/
 coverage/
 *.zip
 !claude-code-context-capturer-*.zip
-.claude/settings.local.json
+.claude/

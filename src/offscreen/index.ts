@@ -1,4 +1,4 @@
-import { loadClaudeMdHandle } from '@/shared/handle-store';
+import { getRoute } from '@/shared/handle-store';
 import { buildAppendBlock } from '@/shared/file-appender';
 import type { OffscreenMessage, OffscreenResult } from '@/shared/types';
 
@@ -14,45 +14,46 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
   if (!isOffscreenMessage(message)) return false;
 
   if (message.type === 'APPEND_TO_CLAUDE_MD') {
-    void appendToClaudeMd(message.content, message.heading).then(sendResponse);
+    void appendToRoute(message.routeId, message.content, message.heading).then(sendResponse);
     return true; // async response
   }
   return false;
 });
 
-async function appendToClaudeMd(
+async function appendToRoute(
+  routeId: string,
   content: string,
   heading: string
 ): Promise<OffscreenResult> {
-  const handle = await loadClaudeMdHandle();
-  if (!handle) {
-    return { ok: false, reason: 'no-handle', message: 'No CLAUDE.md is linked.' };
+  const route = await getRoute(routeId);
+  if (!route) {
+    return { ok: false, reason: 'no-handle', message: 'Route is no longer linked.' };
   }
 
   // Permission may have lapsed since the user picked the file. We can only
-  // re-prompt from a window that has a transient user activation, which the
-  // offscreen doc lacks — so we report back and let the UI ask the user
-  // to re-link from the options page.
-  const perm = await handle.queryPermission({ mode: 'readwrite' });
+  // re-prompt from a window with a transient user activation, which the
+  // offscreen doc lacks — report back and let the UI ask the user to
+  // re-grant from the options page.
+  const perm = await route.handle.queryPermission({ mode: 'readwrite' });
   if (perm !== 'granted') {
     return {
       ok: false,
       reason: 'permission-denied',
-      message: 'Re-link CLAUDE.md from the options page to grant write access.',
+      message: `Re-link "${route.label}" from the options page to grant write access.`,
     };
   }
 
   try {
-    const file = await handle.getFile();
+    const file = await route.handle.getFile();
     const existing = file.size > 0 ? await file.text() : '';
     const block = buildAppendBlock(heading, content);
     const next = existing + block;
 
-    const writable = await handle.createWritable({ keepExistingData: false });
+    const writable = await route.handle.createWritable({ keepExistingData: false });
     await writable.write(next);
     await writable.close();
 
-    return { ok: true, fileName: handle.name };
+    return { ok: true, fileName: route.handle.name };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ok: false, reason: 'write-failed', message: msg };

@@ -1,59 +1,104 @@
 /**
- * IndexedDB-backed store for the user-linked CLAUDE.md FileSystemFileHandle.
+ * IndexedDB-backed store for CLAUDE.md routing rules.
  *
- * Why IndexedDB and not chrome.storage: the File System Access API returns a
- * FileSystemFileHandle, which is structured-cloneable but not JSON-serializable.
- * chrome.storage serializes everything as JSON, so the handle would be lost.
- * IndexedDB preserves the handle and its underlying OS-level file binding
- * across browser restarts.
+ * Why IndexedDB: each route owns a FileSystemFileHandle, which is structured-
+ * cloneable but not JSON-serializable. chrome.storage would lose the underlying
+ * OS file binding on round-trip; IndexedDB preserves it across sessions.
  */
 
+import type { ClaudeMdRoute } from './types';
+
 const DB_NAME = 'ccc-handles';
-const STORE = 'kv';
-const KEY_HANDLE = 'claudeMdHandle';
+const DB_VERSION = 2;
+const STORE_KV = 'kv';
+const STORE_ROUTES = 'routes';
+const LEGACY_KEY = 'claudeMdHandle';
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (event) => {
+      const db = req.result;
+      if (event.oldVersion < 1) {
+        db.createObjectStore(STORE_KV);
+      }
+      if (event.oldVersion < 2) {
+        // routes is keyed by route.id; we use out-of-line keys via keyPath.
+        db.createObjectStore(STORE_ROUTES, { keyPath: 'id' });
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
 
-async function withStore<T>(
+function tx<T>(
+  storeName: string,
   mode: IDBTransactionMode,
-  fn: (store: IDBObjectStore) => IDBRequest<T> | Promise<T>
+  fn: (store: IDBObjectStore) => IDBRequest<T>
 ): Promise<T> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, mode);
-    const store = tx.objectStore(STORE);
-    const result = fn(store);
-    if (result instanceof IDBRequest) {
-      result.onsuccess = () => resolve(result.result);
-      result.onerror = () => reject(result.error);
-    } else {
-      result.then(resolve, reject);
-    }
-  });
-}
-
-/** Persist the file handle the user just picked. */
-export async function saveClaudeMdHandle(handle: FileSystemFileHandle): Promise<void> {
-  await withStore('readwrite', (store) => store.put(handle, KEY_HANDLE));
-}
-
-/** Read the previously saved handle, or undefined if none. */
-export async function loadClaudeMdHandle(): Promise<FileSystemFileHandle | undefined> {
-  return withStore<FileSystemFileHandle | undefined>('readonly', (store) =>
-    store.get(KEY_HANDLE)
+  return openDb().then(
+    (db) =>
+      new Promise<T>((resolve, reject) => {
+        const transaction = db.transaction(storeName, mode);
+        const store = transaction.objectStore(storeName);
+        const req = fn(store);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      })
   );
 }
 
-/** Forget the linked file. */
-export async function clearClaudeMdHandle(): Promise<void> {
-  await withStore('readwrite', (store) => store.delete(KEY_HANDLE));
+/** Read every saved route. Order is deterministic by createdAt ASC. */
+export async function listRoutes(): Promise<ClaudeMdRoute[]> {
+  await migrateLegacyHandle();
+  const all = await tx<ClaudeMdRoute[]>(STORE_ROUTES, 'readonly', (s) => s.getAll());
+  return all.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+/** Insert or replace a route by id. */
+export async function saveRoute(route: ClaudeMdRoute): Promise<void> {
+  await tx(STORE_ROUTES, 'readwrite', (s) => s.put(route));
+}
+
+/** Look up a single route by id. */
+export async function getRoute(id: string): Promise<ClaudeMdRoute | undefined> {
+  return tx<ClaudeMdRoute | undefined>(STORE_ROUTES, 'readonly', (s) => s.get(id));
+}
+
+/** Delete a route by id. */
+export async function deleteRoute(id: string): Promise<void> {
+  await tx(STORE_ROUTES, 'readwrite', (s) => s.delete(id));
+}
+
+/**
+ * One-time migration from v0.2.0's single-handle schema. If a legacy
+ * `claudeMdHandle` value exists in the kv store and no routes yet exist,
+ * convert it to a single default route.
+ */
+async function migrateLegacyHandle(): Promise<void> {
+  const legacy = await tx<FileSystemFileHandle | undefined>(
+    STORE_KV,
+    'readonly',
+    (s) => s.get(LEGACY_KEY)
+  );
+  if (!legacy) return;
+
+  const existing = await tx<ClaudeMdRoute[]>(STORE_ROUTES, 'readonly', (s) => s.getAll());
+  if (existing.length > 0) {
+    // Routes already populated — drop the legacy key without further action.
+    await tx(STORE_KV, 'readwrite', (s) => s.delete(LEGACY_KEY));
+    return;
+  }
+
+  const migrated: ClaudeMdRoute = {
+    id: crypto.randomUUID(),
+    label: legacy.name || 'CLAUDE.md',
+    pattern: '',
+    isDefault: true,
+    createdAt: new Date().toISOString(),
+    handle: legacy,
+  };
+  await tx(STORE_ROUTES, 'readwrite', (s) => s.put(migrated));
+  await tx(STORE_KV, 'readwrite', (s) => s.delete(LEGACY_KEY));
 }
