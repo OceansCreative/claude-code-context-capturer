@@ -7,5 +7,4 @@ dist/
 .vite
 coverage/
 *.zip
-!claude-code-context-capturer-*.zip
 .claude/
