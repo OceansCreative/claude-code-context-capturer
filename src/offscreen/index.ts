@@ -23,8 +23,11 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 
   if (message.type === 'PING') {
     // Synchronous response so the SW knows the listener is wired up.
+    // Returning true (not false) keeps the channel open until sendResponse
+    // is delivered — some Chrome versions discard the response when the
+    // listener returns false even after calling sendResponse synchronously.
     sendResponse({ ok: true });
-    return false;
+    return true;
   }
   if (message.type === 'APPEND_TO_CLAUDE_MD') {
     void appendToRoute(message.routeId, message.content, message.heading).then(

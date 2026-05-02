@@ -187,16 +187,14 @@ async function appendToClaudeMd(
     );
   }
 
-  await ensureOffscreen();
   const heading = buildEntryHeading(ctx);
-  const message: OffscreenMessage = {
+  const result = await sendToOffscreenWithRetry<OffscreenAppendResult>({
     target: 'offscreen',
     type: 'APPEND_TO_CLAUDE_MD',
     routeId: route.id,
     content: markdown,
     heading,
-  };
-  const result = (await chrome.runtime.sendMessage(message)) as OffscreenAppendResult;
+  });
   if (!result?.ok) {
     // Throw so requestCapture's try/catch surfaces the error to the popup.
     const reason = result?.reason ?? 'write-failed';
@@ -217,19 +215,53 @@ async function appendToClaudeMd(
  *   So captures looked like they succeeded but the clipboard stayed empty.
  *
  * The offscreen document's clipboard access doesn't depend on tab focus,
- * because the offscreen reasons array includes CLIPBOARD.
+ * because the offscreen reasons array includes CLIPBOARD and the offscreen
+ * uses the legacy textarea + execCommand("copy") path.
  */
 async function writeToClipboardViaOffscreen(text: string): Promise<void> {
-  await ensureOffscreen();
-  const message: OffscreenMessage = {
+  const result = await sendToOffscreenWithRetry<OffscreenClipboardResult>({
     target: 'offscreen',
     type: 'WRITE_TO_CLIPBOARD',
     content: text,
-  };
-  const result = (await chrome.runtime.sendMessage(message)) as OffscreenClipboardResult;
+  });
   if (!result?.ok) {
     throw new Error(`clipboard-failed: ${result?.message ?? 'Unknown error'}`);
   }
+}
+
+/**
+ * Send a message to the offscreen document, retrying transparently if the
+ * runtime says "Receiving end does not exist". That error fires whenever
+ * the offscreen's onMessage listener isn't fully registered yet — which
+ * can happen even after createDocument resolves and even after a successful
+ * PING handshake, because Chrome's message routing has subtle timing
+ * windows when the SW just cold-started or the offscreen page is still
+ * loading its ESM chunks.
+ *
+ * Retries: up to 8 attempts, 50ms between, ~400ms worst case before throw.
+ */
+async function sendToOffscreenWithRetry<T>(
+  message: OffscreenMessage,
+  retries = 8,
+  delayMs = 50
+): Promise<T> {
+  await ensureOffscreen();
+  let lastError: unknown;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return (await chrome.runtime.sendMessage(message)) as T;
+    } catch (err) {
+      lastError = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      // Only retry on the specific race-condition error. Anything else is
+      // a real failure and should propagate immediately.
+      if (!/Receiving end does not exist|Could not establish connection/.test(msg)) {
+        throw err;
+      }
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw lastError ?? new Error('offscreen sendMessage failed after retries');
 }
 
 let creatingOffscreen: Promise<void> | null = null;
