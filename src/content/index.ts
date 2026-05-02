@@ -12,13 +12,20 @@ chrome.runtime.onMessage.addListener(
     _sender,
     sendResponse: (response: RuntimeMessage) => void
   ) => {
-    try {
-      if (message.type === 'CAPTURE_PAGE') {
-        const ctx: CapturedContext = dispatchPageParser();
-        sendResponse({ type: 'CAPTURE_RESULT', payload: ctx });
-        return true;
-      }
-      if (message.type === 'CAPTURE_SELECTION') {
+    if (message.type === 'CAPTURE_PAGE') {
+      void (async () => {
+        try {
+          const ctx: CapturedContext = await dispatchPageParser();
+          sendResponse({ type: 'CAPTURE_RESULT', payload: ctx });
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          sendResponse({ type: 'CAPTURE_ERROR', error: errMsg });
+        }
+      })();
+      return true; // keep the message channel open for the async response
+    }
+    if (message.type === 'CAPTURE_SELECTION') {
+      try {
         const ctx = parseSelection();
         if (ctx) {
           sendResponse({ type: 'CAPTURE_RESULT', payload: ctx });
@@ -28,11 +35,10 @@ chrome.runtime.onMessage.addListener(
             error: 'No text is selected on the page.',
           });
         }
-        return true;
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        sendResponse({ type: 'CAPTURE_ERROR', error: errMsg });
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      sendResponse({ type: 'CAPTURE_ERROR', error: message });
       return true;
     }
     return false;

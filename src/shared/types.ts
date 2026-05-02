@@ -31,6 +31,7 @@ export type ParserName =
   | 'zenn'
   | 'qiita'
   | 'mdn'
+  | 'claude-ai'
   | 'generic'
   | 'selection';
 

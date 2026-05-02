@@ -55,6 +55,7 @@ I see the same.
 - **メタ情報の埋め込み**：URL・タイトル・取得日時を YAML frontmatter で付与
 - **CLAUDE.md への直書き** *(v0.2.0+)*：プロジェクトの `CLAUDE.md` を一度ピックすれば、以降のキャプチャは File System Access API 経由で自動 append。コピペ不要
 - **マルチプロジェクト振り分け** *(v0.3.0+)*：URL パターン（glob）で複数の CLAUDE.md を使い分け。例：`github.com/anthropic/*` → anthropic 用、`zenn.dev/*` → 個人メモ、無マッチは default ルート
+- **claude.ai 会話のキャプチャ** *(v0.4.0+)*：claude.ai でブレストした会話をワンクリックで CLAUDE.md に流し込み。share リンクの 403 問題、手コピペの労力を解消。内部 API を叩いて thinking blocks・tool_use・branch 構造まで保持
 - **キャプチャバッファ**：複数ページをまとめて溜めて、後から一括エクスポート
 - **キーボードショートカット**：
   - `Ctrl+Shift+L`（macOS: `Cmd+Shift+L`）：ページ全体
@@ -83,6 +84,7 @@ I see the same.
 | **プロジェクトの実ファイル `CLAUDE.md` に直接書き込み** | ✗ | ✗（独自 Vault） | ✗ | **✓** |
 | **URL パターンで複数ファイルに振り分け** | ✗ | ✗ | ✗ | **✓** |
 | GitHub / Stack Overflow / Zenn / Qiita / MDN サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
+| **claude.ai 会話キャプチャ（thinking / tool_use / branch 保持）** | ✗ | ✗ | ✗ | **✓** |
 | 100% ローカル処理・完全 OSS | ✓ | ✗（SaaS） | ✓ | ✓ |
 
 要は「**Claude Code（や類似 AI エージェント）の context file 専用に振り切った clipper**」です。汎用 Markdown clipper が欲しいなら LLMFeeder の方が成熟しています。プロジェクトの `CLAUDE.md` を自動メンテしたいなら、これがおそらく現状唯一の選択肢です。
@@ -239,6 +241,7 @@ Honestly, several Web→Markdown extensions already exist: **[LLMFeeder](https:/
 | **Direct write to your project's `CLAUDE.md`** | ✗ | ✗ (own vault) | ✗ | **✓** |
 | **URL-pattern routing to multiple files** | ✗ | ✗ | ✗ | **✓** |
 | Site-specific parsers (GitHub / SO / Zenn / Qiita / MDN) | ✗ | partial | ✗ | **✓** |
+| **claude.ai conversation capture (thinking / tool_use / branches preserved)** | ✗ | ✗ | ✗ | **✓** |
 | 100% local, fully OSS | ✓ | ✗ (SaaS) | ✓ | ✓ |
 
 In short: a clipper purpose-built for AI agent context files. If you want a general-purpose Markdown clipper, LLMFeeder is more mature. If you want to keep your project's `CLAUDE.md` continuously up to date with your reading, this is currently your only option.
@@ -251,6 +254,7 @@ In short: a clipper purpose-built for AI agent context files. If you want a gene
 - **YAML frontmatter** with URL, title, captured_at, author, tags
 - **Direct CLAUDE.md write** *(v0.2.0+)* — Link a `CLAUDE.md` once via the File System Access API; subsequent captures append directly, no copy/paste
 - **Multi-project routing** *(v0.3.0+)* — Link multiple `CLAUDE.md` files with URL glob patterns. Captures from `github.com/anthropic/*` go to one file, `zenn.dev/*` to another, unmatched URLs to a default route
+- **claude.ai conversation capture** *(v0.4.0+)* — Capture your claude.ai brainstorm conversation in one click. Bypasses the 403-on-share-link issue and the manual copy-paste loop. Hits claude.ai's internal API to preserve thinking blocks, tool_use entries, and branch structure that DOM scraping would miss
 - **Buffer mode** — Stack multiple captures and export all at once
 - **Keyboard shortcuts**:
   - `Ctrl+Shift+L` (Cmd+Shift+L on macOS) — capture page
