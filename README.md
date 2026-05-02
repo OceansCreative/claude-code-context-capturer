@@ -1,20 +1,18 @@
 # Claude Code Context Capturer
 
-> 開いている Web ページを「Claude Code 用の構造化された Markdown コンテキスト」に変換してクリップボードにコピーする Chrome 拡張機能。
+> Capture web pages as Markdown and append them **directly to your project's `CLAUDE.md`**. Multi-project routing by URL pattern. Site-specific parsers for GitHub, Stack Overflow, Zenn, Qiita, MDN.
 
-[English version below](#english)
+![hero](docs/screenshots/03-hero.png)
+
+[English version below](#english) ・ [日本語](#日本語)
 
 ---
 
-## 🎯 これは何か
+## <a id="日本語"></a>🎯 これは何か
 
-Claude Code に Web ページを渡したいとき、こんな悩みはありませんか：
+Claude Code で 1 時間調べ物をして、ターミナルに戻った頃には「あの 5 つの記事の内容」が AI エージェントに伝わってない — このループを閉じる拡張機能です。
 
-- URL だけだと Claude が読み込めないことがある
-- ページ全体をコピーすると広告・ナビゲーション・サイドバーまで混入する
-- GitHub Issue / Stack Overflow / 技術ブログの構造を保ったまま渡したい
-
-この拡張機能は、開いているページから**ノイズを除いた本文だけ**を取り出し、Claude Code が消化しやすい Markdown に変換してクリップボードにコピーします。
+開いているページから**ノイズを除いた本文だけ**を Markdown に変換し、プロジェクトの `CLAUDE.md` に**直接 append** します。URL パターン（glob）で複数の `CLAUDE.md` を使い分けることもできます（例：`github.com/anthropic/*` → 仕事用、`zenn.dev/*` → 個人メモ）。
 
 ```yaml
 ---
@@ -64,6 +62,31 @@ I see the same.
 - **コンテキストメニュー**：右クリックから直接キャプチャ
 - **設定可能**：frontmatter の有無、フッター、文字数上限、ロケール（en / ja）など
 
+## 📸 スクリーンショット
+
+**実際に CLAUDE.md に書き込まれる内容:**
+
+![CLAUDE.md にエントリが追加される様子](docs/screenshots/04-claude-md-rendered.png)
+
+**マルチプロジェクトルーティング設定:**
+
+![ルートテーブル](docs/screenshots/01-options-routes.png)
+
+## 🆚 既存の Web→Markdown 拡張との違い
+
+正直に言うと、Web ページを Markdown 化する Chrome 拡張は他にも **[LLMFeeder](https://github.com/jatinkrmalik/LLMFeeder)**、**[Save](https://www.savemarkdown.co/)**、**[Context Collector](https://github.com/jerilseb/context-collector)** などが既にあります。それらとの違い：
+
+| 機能 | LLMFeeder | Save | Context Collector | **この拡張** |
+|---|---|---|---|---|
+| Web → Markdown 変換 | ✓ | ✓ | ✓ | ✓ |
+| クリップボードに出力 | ✓ | ✓ | ✓ | ✓ |
+| **プロジェクトの実ファイル `CLAUDE.md` に直接書き込み** | ✗ | ✗（独自 Vault） | ✗ | **✓** |
+| **URL パターンで複数ファイルに振り分け** | ✗ | ✗ | ✗ | **✓** |
+| GitHub / Stack Overflow / Zenn / Qiita / MDN サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
+| 100% ローカル処理・完全 OSS | ✓ | ✗（SaaS） | ✓ | ✓ |
+
+要は「**Claude Code（や類似 AI エージェント）の context file 専用に振り切った clipper**」です。汎用 Markdown clipper が欲しいなら LLMFeeder の方が成熟しています。プロジェクトの `CLAUDE.md` を自動メンテしたいなら、これがおそらく現状唯一の選択肢です。
+
 ## 🚀 インストール
 
 ### Chrome ウェブストア（推奨）
@@ -87,6 +110,8 @@ npm run build
 4. このリポジトリの `dist/` ディレクトリを選択
 
 ## 💡 使い方
+
+<img src="docs/screenshots/02-popup.png" width="320" align="right" alt="popup" />
 
 ### ページ全体をキャプチャ
 
@@ -185,17 +210,38 @@ Claude Code エージェント集シリーズ：
 
 # Claude Code Context Capturer (English)
 
-> A Chrome extension that converts any web page into Claude Code-friendly Markdown context with one click.
+> A Chrome extension that captures web pages as Markdown and writes them **directly to your project's `CLAUDE.md`**. Multi-project routing by URL pattern.
 
 ## What it does
 
-When you want to share a web page with Claude Code, you face three problems:
+When you research with Claude Code (or any AI coding agent), you read 5 articles for an hour, switch to your terminal, and the agent has none of that context. This extension closes that loop: every page you capture is appended to your project's `CLAUDE.md` so the next session starts where your reading ended.
 
-- URLs alone don't always work — Claude may not be able to fetch the content
-- Copy-pasting the whole page brings ads, navigation, and sidebars
-- You want to preserve the structure of GitHub Issues, Stack Overflow answers, technical blogs
+URL globs let you maintain separate `CLAUDE.md` files per project — `github.com/anthropic/*` to one file, `zenn.dev/*` to another, unmatched URLs to a default catch-all.
 
-This extension extracts **only the main content**, converts it to clean Markdown, and copies it to your clipboard. Drop it into your Claude Code conversation and you have full context.
+## Screenshots
+
+**What lands in your `CLAUDE.md`:**
+
+![what gets written to CLAUDE.md](docs/screenshots/04-claude-md-rendered.png)
+
+**Multi-route configuration:**
+
+![routes table](docs/screenshots/01-options-routes.png)
+
+## How is this different from existing Markdown clippers?
+
+Honestly, several Web→Markdown extensions already exist: **[LLMFeeder](https://github.com/jatinkrmalik/LLMFeeder)**, **[Save](https://www.savemarkdown.co/)**, **[Context Collector](https://github.com/jerilseb/context-collector)**, and the venerable **MarkDownload**. This one's differentiation:
+
+| Feature | LLMFeeder | Save | Context Collector | **This extension** |
+|---|---|---|---|---|
+| Web → Markdown conversion | ✓ | ✓ | ✓ | ✓ |
+| Clipboard output | ✓ | ✓ | ✓ | ✓ |
+| **Direct write to your project's `CLAUDE.md`** | ✗ | ✗ (own vault) | ✗ | **✓** |
+| **URL-pattern routing to multiple files** | ✗ | ✗ | ✗ | **✓** |
+| Site-specific parsers (GitHub / SO / Zenn / Qiita / MDN) | ✗ | partial | ✗ | **✓** |
+| 100% local, fully OSS | ✓ | ✗ (SaaS) | ✓ | ✓ |
+
+In short: a clipper purpose-built for AI agent context files. If you want a general-purpose Markdown clipper, LLMFeeder is more mature. If you want to keep your project's `CLAUDE.md` continuously up to date with your reading, this is currently your only option.
 
 ## Features
 

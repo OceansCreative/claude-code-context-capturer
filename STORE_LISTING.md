@@ -7,27 +7,30 @@ This file contains the text and asset specs you'll need when submitting the exte
 ## Store listing — short description (132 chars max)
 
 ```
-Convert any web page into clean Markdown for Claude Code, ChatGPT, and other LLMs. One click, with site-specific parsers.
+Capture web pages as Markdown and append them directly to your project's CLAUDE.md. Multi-project routing by URL pattern.
 ```
 
 ## Store listing — detailed description (English)
 
 ```
-Claude Code Context Capturer turns any web page into Markdown that's ready to paste into Claude Code, ChatGPT, or any LLM chat — without ads, navigation, or sidebars.
+Claude Code Context Capturer turns any web page into clean Markdown and writes it directly to your project's CLAUDE.md — closing the "I researched something for an hour, now my AI agent has none of that context" loop.
 
 Why use it?
 • URLs alone don't always work — many LLMs can't fetch external content reliably
-• Copy-pasting the whole page brings noise (ads, menus, footers)
-• You want to preserve the structure of GitHub Issues, Stack Overflow answers, technical articles
+• Copy-pasting brings noise (ads, menus, footers)
+• Manual paste-into-CLAUDE.md doesn't survive busy days
+• Different projects need different context files
 
 What it does:
-• One-click capture from the toolbar or keyboard shortcut
+• Direct write to CLAUDE.md — pick the file once with the File System Access API; subsequent captures append to it automatically
+• Multi-project routing — link multiple CLAUDE.md files and route by URL glob (e.g. github.com/anthropic/* → one file, zenn.dev/* → another)
 • Site-specific parsers for GitHub, Stack Overflow, Zenn, Qiita, MDN
-• Generic parser (powered by Mozilla Readability) for everything else
+• Generic parser (Mozilla Readability) for everything else
 • Selection mode: capture just what you've highlighted
-• Buffer mode: stack multiple captures and export them all at once
+• Buffer mode: stack captures in extension storage for later export
 • YAML frontmatter with URL, title, captured_at, tags
-• Localized: English and Japanese
+• One-click from toolbar / keyboard shortcut / right-click menu
+• English and Japanese UI
 
 Keyboard shortcuts:
 • Ctrl+Shift+L (Cmd+Shift+L on macOS) — capture page
@@ -36,6 +39,7 @@ Keyboard shortcuts:
 Privacy first:
 • 100% local processing — nothing leaves your device
 • No telemetry, no analytics, no external servers
+• File handles stored locally in IndexedDB
 • Open source under the MIT license
 
 Source code: https://github.com/OceansCreative/claude-code-context-capturer
@@ -44,21 +48,24 @@ Source code: https://github.com/OceansCreative/claude-code-context-capturer
 ## Store listing — detailed description (Japanese)
 
 ```
-Claude Code Context Capturer は、開いている Web ページを Claude Code・ChatGPT などに貼りやすい Markdown に変換する Chrome 拡張機能です。広告・ナビ・サイドバーを除いて本文だけを抽出します。
+Claude Code Context Capturer は、開いている Web ページを Markdown に変換して、プロジェクトの CLAUDE.md に直接書き込む Chrome 拡張機能です。「1 時間調べ物した内容が AI エージェントに伝わらない」という日常を解消します。
 
 こんなときに便利:
 • URL だけだと LLM が読み込めないことがある
 • ページ全体をコピーすると広告・メニュー・フッターが混入する
-• GitHub Issue / Stack Overflow / 技術記事の構造を保ったまま渡したい
+• 手動コピペで CLAUDE.md を更新する習慣が続かない
+• 複数プロジェクトで context file を使い分けたい
 
 機能:
-• ツールバー or キーボードショートカットでワンクリック抽出
-• GitHub・Stack Overflow・Zenn・Qiita・MDN の専用パーサー
+• CLAUDE.md への直接書き込み — File System Access API で一度ファイルを指定すれば、以降のキャプチャは自動で append
+• マルチプロジェクト振り分け — URL パターン(glob)で複数の CLAUDE.md を使い分け(例: github.com/anthropic/* → 仕事用、zenn.dev/* → 個人メモ)
+• GitHub・Stack Overflow・Zenn・Qiita・MDN のサイト別パーサー
 • その他のサイトは Mozilla Readability で本文抽出
 • 選択範囲モード(テキスト選択時はその部分のみ)
 • バッファモード(複数キャプチャを溜めて一括エクスポート)
 • YAML frontmatter で URL・タイトル・取得日時・タグを自動付与
-• 英語・日本語ロケール
+• ツールバー / ショートカット / 右クリックメニュー対応
+• 英語・日本語 UI
 
 キーボードショートカット:
 • Ctrl+Shift+L(macOS: Cmd+Shift+L) — ページ全体
@@ -67,6 +74,7 @@ Claude Code Context Capturer は、開いている Web ページを Claude Code�
 プライバシー:
 • 100% ローカル処理 — データは端末から外に出ません
 • テレメトリ・アナリティクス・外部サーバーへの通信は一切なし
+• ファイルハンドルは IndexedDB にローカル保存
 • MIT ライセンスのオープンソース
 
 ソースコード: https://github.com/OceansCreative/claude-code-context-capturer
@@ -92,10 +100,10 @@ English (primary), Japanese (secondary)
 The Chrome Web Store requires at least 1 and up to 5 screenshots, **1280×800 or 640×400 px**.
 
 Suggested screenshots:
-1. The popup with "Capture page" and "Capture selection" buttons
-2. A captured GitHub Issue rendered as Markdown next to the source
-3. The settings page with options visible
-4. A Zenn or Qiita article being captured (for Japanese audience appeal)
+1. The options page showing the routes table (key differentiator vs other clippers)
+2. The popup with "Capture page" and "Capture selection" buttons
+3. A captured GitHub Issue rendered as Markdown inside CLAUDE.md (the killer feature)
+4. The settings page with options visible
 5. The buffer view showing multiple captures stacked
 
 ### Promotional tile (optional but recommended)
@@ -112,10 +120,11 @@ When submitting, the Chrome Web Store will ask you to justify each permission. U
 | Permission | Justification |
 |---|---|
 | `activeTab` | Required to read the content of the tab the user is actively viewing, only when they invoke a capture. |
-| `clipboardWrite` | Required to copy the Markdown output to the user's clipboard, which is the primary purpose of the extension. |
+| `clipboardWrite` | Required to copy the Markdown output to the user's clipboard, which is one of the available output modes. |
 | `storage` | Required to save user preferences and the optional capture buffer locally. |
 | `scripting` | Required to execute the clipboard write call inside the active tab's context. |
 | `contextMenus` | Required to add "Capture page" and "Capture selection" entries to the right-click menu. |
+| `offscreen` | Required to host a hidden document where File System Access API writes can run (MV3 service workers cannot access FSA directly). |
 | `<all_urls>` host permission | Required so users can capture from any site they visit. The extension does not run automatically — capture only happens when the user explicitly triggers it. |
 
 ## Single purpose statement
