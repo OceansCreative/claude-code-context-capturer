@@ -104,23 +104,46 @@ export interface ClaudeMdRoute {
 /**
  * Messages targeted at the offscreen document. The `target` field lets
  * other contexts (popup, options) ignore them — runtime.sendMessage is broadcast.
+ *
+ * The offscreen document hosts both File System Access writes (CLAUDE.md
+ * append) AND clipboard writes. Clipboard via offscreen is required because
+ * MV3 service workers can't use navigator.clipboard, and chrome.scripting
+ * injection into the active tab silently fails when the popup steals focus.
  */
-export type OffscreenMessage = {
-  target: 'offscreen';
-  type: 'APPEND_TO_CLAUDE_MD';
-  /** Which route's handle to write into. */
-  routeId: string;
-  /** Pre-rendered Markdown body (frontmatter + body + footer). */
-  content: string;
-  /** Heading prefix line, e.g. `## 2026-04-30 22:35 — <title>`. */
-  heading: string;
-};
+export type OffscreenMessage =
+  | {
+      target: 'offscreen';
+      type: 'APPEND_TO_CLAUDE_MD';
+      /** Which route's handle to write into. */
+      routeId: string;
+      /** Pre-rendered Markdown body (frontmatter + body + footer). */
+      content: string;
+      /** Heading prefix line, e.g. `## 2026-04-30 22:35 — <title>`. */
+      heading: string;
+    }
+  | {
+      target: 'offscreen';
+      type: 'WRITE_TO_CLIPBOARD';
+      /** Text to place on the system clipboard. */
+      content: string;
+    };
 
-/** Result returned from the offscreen document. */
-export type OffscreenResult =
+/** Result returned from the offscreen document for file-append operations. */
+export type OffscreenAppendResult =
   | { ok: true; fileName: string }
   | {
       ok: false;
       reason: 'no-handle' | 'permission-denied' | 'write-failed' | 'no-route';
       message: string;
     };
+
+/** Result returned from the offscreen document for clipboard writes. */
+export type OffscreenClipboardResult =
+  | { ok: true }
+  | { ok: false; reason: 'clipboard-failed'; message: string };
+
+/**
+ * Generic offscreen response — the union of all offscreen-handled message
+ * results. Callers narrow by which message they sent.
+ */
+export type OffscreenResult = OffscreenAppendResult | OffscreenClipboardResult;

@@ -6,8 +6,9 @@ import { listRoutes } from '@/shared/handle-store';
 import { resolveRoute } from '@/shared/route-matcher';
 import type {
   CapturedContext,
+  OffscreenAppendResult,
+  OffscreenClipboardResult,
   OffscreenMessage,
-  OffscreenResult,
   RuntimeMessage,
   UserOptions,
 } from '@/shared/types';
@@ -154,10 +155,10 @@ async function deliver(
   markdown: string,
   ctx: CapturedContext,
   options: UserOptions,
-  tabId: number
+  _tabId: number
 ): Promise<void> {
   if (options.defaultMode === 'clipboard' || options.defaultMode === 'both') {
-    await copyToClipboardViaTab(tabId, markdown);
+    await writeToClipboardViaOffscreen(markdown);
   }
   if (options.defaultMode === 'append-buffer' || options.defaultMode === 'both') {
     await appendToBuffer(ctx, markdown);
@@ -195,12 +196,39 @@ async function appendToClaudeMd(
     content: markdown,
     heading,
   };
-  const result = (await chrome.runtime.sendMessage(message)) as OffscreenResult;
+  const result = (await chrome.runtime.sendMessage(message)) as OffscreenAppendResult;
   if (!result?.ok) {
     // Throw so requestCapture's try/catch surfaces the error to the popup.
     const reason = result?.reason ?? 'write-failed';
     const detail = result?.message ?? 'Unknown error';
     throw new Error(`${reason}: ${detail}`);
+  }
+}
+
+/**
+ * Write to the system clipboard via the offscreen document.
+ *
+ * Why not chrome.scripting.executeScript on the active tab:
+ *   navigator.clipboard.writeText() rejects with "Document is not focused"
+ *   when the popup is open (the popup steals focus from the tab). Worse,
+ *   chrome.scripting.executeScript silently swallows the inner Promise
+ *   rejection — the outer call resolves successfully and the rejection
+ *   sits in result.error which the previous implementation didn't check.
+ *   So captures looked like they succeeded but the clipboard stayed empty.
+ *
+ * The offscreen document's clipboard access doesn't depend on tab focus,
+ * because the offscreen reasons array includes CLIPBOARD.
+ */
+async function writeToClipboardViaOffscreen(text: string): Promise<void> {
+  await ensureOffscreen();
+  const message: OffscreenMessage = {
+    target: 'offscreen',
+    type: 'WRITE_TO_CLIPBOARD',
+    content: text,
+  };
+  const result = (await chrome.runtime.sendMessage(message)) as OffscreenClipboardResult;
+  if (!result?.ok) {
+    throw new Error(`clipboard-failed: ${result?.message ?? 'Unknown error'}`);
   }
 }
 
@@ -215,27 +243,18 @@ async function ensureOffscreen(): Promise<void> {
   creatingOffscreen = chrome.offscreen
     .createDocument({
       url: 'src/offscreen/index.html',
-      reasons: [chrome.offscreen.Reason.BLOBS],
-      justification: 'Append captured Markdown to the user-linked CLAUDE.md file.',
+      // BLOBS for FSA writes to the linked CLAUDE.md.
+      // CLIPBOARD so navigator.clipboard.writeText works without active-tab
+      // focus (the popup steals focus from the captured tab; writes from
+      // a content-script-injected script silently fail in that case).
+      reasons: [chrome.offscreen.Reason.BLOBS, chrome.offscreen.Reason.CLIPBOARD],
+      justification:
+        'Append captured Markdown to the user-linked CLAUDE.md file and write to the system clipboard.',
     })
     .finally(() => {
       creatingOffscreen = null;
     });
   await creatingOffscreen;
-}
-
-/**
- * Service workers can't access the system clipboard directly in MV3,
- * so we ask the content script to write via the page's clipboard API.
- */
-async function copyToClipboardViaTab(tabId: number, text: string): Promise<void> {
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    func: (value: string) => {
-      return navigator.clipboard.writeText(value);
-    },
-    args: [text],
-  });
 }
 
 async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
