@@ -126,6 +126,16 @@ export type OffscreenMessage =
       type: 'WRITE_TO_CLIPBOARD';
       /** Text to place on the system clipboard. */
       content: string;
+    }
+  | {
+      target: 'offscreen';
+      /**
+       * Readiness probe. The offscreen document responds with `{ ok: true }`
+       * once its onMessage listener is registered. Lets the SW avoid the
+       * race where chrome.offscreen.createDocument resolves before the
+       * offscreen module's listener is wired up.
+       */
+      type: 'PING';
     };
 
 /** Result returned from the offscreen document for file-append operations. */

@@ -235,18 +235,26 @@ async function writeToClipboardViaOffscreen(text: string): Promise<void> {
 let creatingOffscreen: Promise<void> | null = null;
 
 async function ensureOffscreen(): Promise<void> {
-  if (await chrome.offscreen.hasDocument?.()) return;
+  if (await chrome.offscreen.hasDocument?.()) {
+    // Document exists, but verify the listener is actually wired up. After a
+    // service worker restart, chrome.offscreen.hasDocument() can return true
+    // for a document whose script context hasn't fully bootstrapped.
+    await waitForOffscreenReady();
+    return;
+  }
   if (creatingOffscreen) {
     await creatingOffscreen;
+    await waitForOffscreenReady();
     return;
   }
   creatingOffscreen = chrome.offscreen
     .createDocument({
       url: 'src/offscreen/index.html',
       // BLOBS for FSA writes to the linked CLAUDE.md.
-      // CLIPBOARD so navigator.clipboard.writeText works without active-tab
-      // focus (the popup steals focus from the captured tab; writes from
-      // a content-script-injected script silently fail in that case).
+      // CLIPBOARD so the textarea + execCommand("copy") fallback works
+      // without active-tab focus (the popup steals focus from the captured
+      // tab; writes from a content-script-injected navigator.clipboard call
+      // silently fail in that case).
       reasons: [chrome.offscreen.Reason.BLOBS, chrome.offscreen.Reason.CLIPBOARD],
       justification:
         'Append captured Markdown to the user-linked CLAUDE.md file and write to the system clipboard.',
@@ -255,6 +263,31 @@ async function ensureOffscreen(): Promise<void> {
       creatingOffscreen = null;
     });
   await creatingOffscreen;
+  // createDocument resolves on the document's "load" event, before its ESM
+  // script chunks have finished executing and registered their onMessage
+  // handler. Without this readiness probe, the very next runtime.sendMessage
+  // races and fails with "Receiving end does not exist".
+  await waitForOffscreenReady();
+}
+
+async function waitForOffscreenReady(timeoutMs = 2000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    try {
+      const reply = (await chrome.runtime.sendMessage({
+        target: 'offscreen',
+        type: 'PING',
+      })) as { ok?: boolean } | undefined;
+      if (reply?.ok) return;
+    } catch (err) {
+      lastError = err;
+    }
+    // Short backoff — the listener usually wires up within a few ms.
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  const detail = lastError instanceof Error ? lastError.message : String(lastError);
+  throw new Error(`offscreen-not-ready: gave up after ${timeoutMs}ms (${detail})`);
 }
 
 async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {

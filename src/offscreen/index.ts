@@ -21,6 +21,11 @@ import type {
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   if (!isOffscreenMessage(message)) return false;
 
+  if (message.type === 'PING') {
+    // Synchronous response so the SW knows the listener is wired up.
+    sendResponse({ ok: true });
+    return false;
+  }
   if (message.type === 'APPEND_TO_CLAUDE_MD') {
     void appendToRoute(message.routeId, message.content, message.heading).then(
       sendResponse
