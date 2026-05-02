@@ -7,7 +7,7 @@ This file contains the text and asset specs you'll need when submitting the exte
 ## Store listing — short description (132 chars max)
 
 ```
-Capture web pages as Markdown and append them directly to your project's CLAUDE.md. Multi-project routing by URL pattern.
+Capture web pages — and your claude.ai conversations — as Markdown straight into your project's CLAUDE.md. URL-pattern routing.
 ```
 
 ## Store listing — detailed description (English)
@@ -24,6 +24,7 @@ Why use it?
 What it does:
 • Direct write to CLAUDE.md — pick the file once with the File System Access API; subsequent captures append to it automatically
 • Multi-project routing — link multiple CLAUDE.md files and route by URL glob (e.g. github.com/anthropic/* → one file, zenn.dev/* → another)
+• claude.ai conversation capture — capture your brainstorm conversations with Claude (thinking blocks, tool_use, branches preserved) straight into your project context
 • Site-specific parsers for GitHub, Stack Overflow, Zenn, Qiita, MDN
 • Generic parser (Mozilla Readability) for everything else
 • Selection mode: capture just what you've highlighted
@@ -59,6 +60,7 @@ Claude Code Context Capturer は、開いている Web ページを Markdown に
 機能:
 • CLAUDE.md への直接書き込み — File System Access API で一度ファイルを指定すれば、以降のキャプチャは自動で append
 • マルチプロジェクト振り分け — URL パターン(glob)で複数の CLAUDE.md を使い分け(例: github.com/anthropic/* → 仕事用、zenn.dev/* → 個人メモ)
+• claude.ai 会話のキャプチャ — claude.ai でブレストした会話を、thinking blocks / tool_use / branch 構造を保ったままプロジェクトの context file に流し込み
 • GitHub・Stack Overflow・Zenn・Qiita・MDN のサイト別パーサー
 • その他のサイトは Mozilla Readability で本文抽出
 • 選択範囲モード(テキスト選択時はその部分のみ)
@@ -130,7 +132,7 @@ When submitting, the Chrome Web Store will ask you to justify each permission. U
 ## Single purpose statement
 
 ```
-The single purpose of this extension is to convert the web page the user is currently viewing into Markdown text for use with AI coding assistants (such as Claude Code) and other LLMs.
+The single purpose of this extension is to convert the web page the user is currently viewing into Markdown text and append it to the user's chosen CLAUDE.md file (or copy it to the clipboard) for use with AI coding assistants such as Claude Code.
 ```
 
 ## Privacy practices declaration

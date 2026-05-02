@@ -48,9 +48,15 @@
   "keywords": [
     "chrome-extension",
     "claude-code",
+    "claude-ai",
+    "anthropic",
+    "ai-coding",
+    "context-engineering",
     "markdown",
     "ai",
-    "context"
+    "context",
+    "manifest-v3",
+    "file-system-access"
   ],
   "author": "Kazushi Ikeda <https://oceans-base.com>"
 }

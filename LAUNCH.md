@@ -1,12 +1,21 @@
 # Launch playbook
 
-Copy-paste-ready material for shipping v0.3.0 publicly. Order the actions top-to-bottom; each section is independent.
+Copy-paste-ready material for shipping the latest version (currently **v0.4.3**) publicly. Order the actions top-to-bottom; each section is independent.
+
+> **Status note:** v0.3.0 was already submitted to Chrome Web Store and is in review. When approval lands, upload the v0.4.3 zip as an *update* to the same listing rather than re-submitting from scratch.
 
 ---
 
-## 1. Chrome Web Store submission
+## 1. Chrome Web Store submission (or update)
 
-The production zip is committed at `claude-code-context-capturer-v0.3.0.zip` (87 KB).
+The production zip is built locally — it is no longer committed to the repo. To rebuild:
+
+```bash
+npm install && npm run build
+cd dist && zip -rq ../claude-code-context-capturer-v0.4.3.zip . && cd ..
+```
+
+The latest released zip is also attached to the [v0.4.3 release on GitHub](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v0.4.3) for direct download.
 
 ### Pre-flight checklist
 
@@ -48,31 +57,32 @@ Expect 1–14 days. Email notifications go to the developer account address.
 Title (under 80 chars):
 
 ```
-Show HN: Chrome extension that writes web pages directly to your CLAUDE.md
+Show HN: Chrome extension piping web pages and claude.ai chats into CLAUDE.md
 ```
 
 Body (paste into the URL field as a self post; leave the URL field blank):
 
 ```
-Hi HN. I built a Chrome extension that converts the web page you're reading into clean Markdown and appends it directly to your project's CLAUDE.md (the context file Claude Code and similar AI agents read on every session).
+Hi HN. I built a Chrome extension that turns the web page you're reading — including your claude.ai conversations — into clean Markdown and appends it directly to your project's CLAUDE.md (the context file Claude Code and similar AI agents read on every session).
 
-Why bother — the existing workflow leaks context badly. You spend an hour reading 5 articles to understand a tricky bug, switch to your terminal to fix it, and the agent knows none of what you just learned. URLs in chat don't reliably work (many models can't fetch). Copy-pasting brings ads, sidebars, footers. Manual CLAUDE.md edits don't survive a busy day.
+Why bother — the existing workflow leaks context badly. You spend an hour brainstorming with claude.ai, then switch to your terminal where Claude Code is running, and the agent knows none of what you just discussed. claude.ai share links 403 from outside the browser session. URLs to articles don't reliably work (many models can't fetch). Copy-pasting brings ads, sidebars, footers. Manual CLAUDE.md edits don't survive a busy day.
 
-This closes the loop. You link a CLAUDE.md once via the File System Access API; subsequent captures append directly. v0.3.0 adds URL-pattern routing — github.com/anthropic/* goes to one file, zenn.dev/* to another, with a default route catching the rest. So I can keep separate AI context files per project without thinking about it.
+This closes the loop. You link a CLAUDE.md once via the File System Access API; subsequent captures append directly. URL-pattern routing — github.com/anthropic/* goes to one file, zenn.dev/* to another, claude.ai/chat/* to whichever project you're working on, with a default route catching the rest.
 
 Some build notes that might be useful to others:
-- MV3 service workers can't use the File System Access API (no DOM). The fix is offscreen documents — chrome.offscreen.createDocument spins up a hidden page that handles the FSA write, then closes when idle.
+- MV3 service workers can't use the File System Access API or write to the clipboard while the popup steals focus. The fix is offscreen documents — chrome.offscreen.createDocument spins up a hidden page that handles both. The clipboard path uses the legacy textarea + execCommand("copy") trick because navigator.clipboard.writeText still requires document focus even from offscreen contexts.
 - FileSystemFileHandle is structured-cloneable but not JSON-serializable, so chrome.storage loses the file binding. IndexedDB preserves it across browser restarts.
+- claude.ai is a React SPA — its DOM drops thinking blocks, tool_use entries, and merges branches. The parser hits claude.ai's internal API (/api/organizations/{org}/chat_conversations/{uuid}?tree=True) from inside the claude.ai tab, where the user's session cookie is automatically attached. Walks the tree from current_leaf back to root.
 - For real-Chrome verification under puppeteer, OPFS (navigator.storage.getDirectory()) gives you a FileSystemFileHandle without the OS picker — same interface, queryPermission auto-granted. Lets you e2e-test the entire write path in CI.
 
-Honest positioning: the broader "Web → Markdown" category is crowded — LLMFeeder and Save are mature options. The specific niche of "directly write to your AI agent's context file with URL-based routing" appears empty, which is what I targeted.
+Honest positioning: the broader "Web → Markdown" category is crowded — LLMFeeder and Save are mature options. The specific niche of "directly write to your AI agent's context file with URL-based routing, including claude.ai conversations" appears empty, which is what I targeted.
 
-100% local, MIT licensed, 45 unit tests, real-Chrome e2e verification.
+100% local, MIT licensed, 58 unit tests, real-Chrome e2e for every release.
 
 Repo: https://github.com/OceansCreative/claude-code-context-capturer
 Chrome Web Store: [in review — paste URL once approved]
 
-Happy to answer questions about the offscreen-doc + IndexedDB pattern, or about positioning in the AI clipper space.
+Happy to answer questions about the offscreen-doc + IndexedDB pattern, the claude.ai internal API, or about positioning in the AI clipper space.
 ```
 
 ### Posting tips
@@ -95,17 +105,17 @@ I built a Chrome extension that writes web pages directly to your project's CLAU
 Body:
 
 ```
-**The problem.** I research with Claude Code, read 5 articles for an hour, switch to my terminal, and the agent knows none of what I just learned. Existing Web→Markdown clippers (LLMFeeder, Save, etc.) all output to clipboard or their own vault — none of them target your project's CLAUDE.md directly.
+**The problem.** I brainstorm with claude.ai for an hour, switch to my terminal where Claude Code is running, and the agent knows none of what we just discussed. Share links 403 from outside the browser session. Existing Web→Markdown clippers (LLMFeeder, Save, etc.) output to clipboard or their own vault — none of them target your project's CLAUDE.md directly, and none parse claude.ai conversations correctly (DOM scraping a React SPA loses thinking blocks and branches).
 
 **What this does.** Pick a CLAUDE.md once with the File System Access API; every subsequent capture appends to it automatically. Each entry gets a `## YYYY-MM-DD HH:MM — <title>` heading, YAML frontmatter (URL, title, captured_at, parser, tags), and the cleaned body.
 
-**v0.3.0 lets you link multiple CLAUDE.md files** and route by URL pattern — `github.com/anthropic/*` → one file, `zenn.dev/*` → another, unmatched URLs to a default route. So per-project AI context files self-maintain.
+**Multi-route by URL pattern** — `github.com/anthropic/*` → one file, `zenn.dev/*` → another, `claude.ai/chat/*` → whichever project you're brainstorming for, unmatched URLs to a default route. Per-project AI context files self-maintain.
 
-**Site-specific parsers** for GitHub (Issues / PRs / Discussions), Stack Overflow, Zenn, Qiita, MDN. Generic Readability fallback for everything else. 100% local — no telemetry, no API key, no external server.
+**Site-specific parsers** for GitHub (Issues / PRs / Discussions), Stack Overflow, Zenn, Qiita, MDN, **claude.ai conversations** (via the internal API, preserving thinking / tool_use / branches). Generic Readability fallback for everything else. 100% local — no telemetry, no API key, no external server.
 
 **MIT licensed.** Repo: https://github.com/OceansCreative/claude-code-context-capturer
 
-Happy to take feedback on missing parsers, UX, or the routing model. v0.4 candidates I'm considering: capture preview/edit before write (kill cruft), YouTube transcript parser, X/Twitter thread parser.
+Happy to take feedback on missing parsers, UX, or the routing model. v0.5 candidates I'm considering: capture preview/edit before write (kill cruft), YouTube transcript parser, X/Twitter thread parser.
 ```
 
 ### Subreddits to consider (in order of fit)
@@ -124,11 +134,11 @@ Don't blast all four day-one. Start with r/ClaudeAI; if it lands well, cross-pos
 Single tweet (280-char budget — currently fits):
 
 ```
-Built a Chrome extension that writes web pages directly to your project's CLAUDE.md.
+Chrome extension that writes web pages — and your claude.ai conversations — straight into your project's CLAUDE.md.
 
-URL-pattern routing — github.com/anthropic/* to one file, zenn.dev/* to another. So per-project AI context files maintain themselves.
+URL-pattern routing per project. github.com/anthropic/*, zenn.dev/*, claude.ai/chat/* all routable.
 
-100% local, MIT, 45 tests.
+100% local, MIT, 58 tests.
 
 github.com/OceansCreative/claude-code-context-capturer
 ```
@@ -136,17 +146,19 @@ github.com/OceansCreative/claude-code-context-capturer
 ### Follow-up thread (post 30 minutes later if first tweet gets traction)
 
 ```
-2/ MV3 service workers can't use the File System Access API (no DOM context).
+2/ The hardest piece was claude.ai. It's a React SPA — DOM scraping loses thinking blocks, tool_use entries, and merged branches.
 
-The fix is offscreen documents — chrome.offscreen.createDocument spins up a hidden page just to host the FSA write call. Closes when idle.
+Fix: hit claude.ai's internal API (/api/organizations/{org}/chat_conversations/{uuid}?tree=True) from inside the claude.ai tab. Session cookie auto-attaches. Walk the tree from current_leaf back to root.
 
-3/ FileSystemFileHandle is structured-cloneable but NOT JSON-serializable.
+3/ MV3 service workers can't use the File System Access API or write to clipboard while a popup steals focus.
 
-chrome.storage round-trips lose the OS file binding. IndexedDB preserves it across browser restarts. Took me an hour to figure out why captures stopped writing after a Chrome restart.
+Both fixes go through chrome.offscreen — a hidden page hosting the writes. Clipboard uses textarea + execCommand("copy") because navigator.clipboard.writeText still needs document focus even from offscreen.
 
-4/ For real-Chrome puppeteer e2e tests:
+4/ FileSystemFileHandle is structured-cloneable but NOT JSON-serializable.
 
-navigator.storage.getDirectory() (OPFS) gives you a FileSystemFileHandle without the OS picker. Same interface, queryPermission auto-granted. The entire write path is now CI-testable.
+chrome.storage round-trips lose the OS file binding. IndexedDB preserves it across browser restarts.
+
+5/ For real-Chrome puppeteer e2e tests, navigator.storage.getDirectory() (OPFS) gives you a FileSystemFileHandle without the OS picker. Same interface, queryPermission auto-granted. The entire write path is CI-testable.
 ```
 
 ### Accounts to tag (if appropriate)
@@ -163,7 +175,7 @@ Morning of launch:
 
 - [ ] Final `npm run build` and `npm test` (sanity)
 - [ ] Verify the GitHub repo's README screenshots all render correctly
-- [ ] Pin the v0.3.0 release in the repo's "Releases" sidebar
+- [ ] Pin the latest release (v0.4.3 or whichever is newest) in the repo's "Releases" sidebar
 - [ ] Open a draft of the HN post, paste content, leave URL field blank
 - [ ] Open a draft of the Reddit post in r/ClaudeAI
 - [ ] Have the X tweet drafted in the app
@@ -187,6 +199,6 @@ Whatever happens:
 - [ ] File issues for any bug reports immediately
 - [ ] Update README with HN/Reddit links once they exist (social proof)
 - [ ] Tag any contributors in CHANGELOG
-- [ ] If traction is real (>500 stars or >50 installs day 1), open a discussion with users on what to ship in v0.4 (capture preview/edit, more parsers, etc.)
+- [ ] If traction is real (>500 stars or >50 installs day 1), open a discussion with users on what to ship in v0.5 (capture preview/edit, more parsers, etc.)
 
-If traction is light: ship v0.4 anyway. The extension is useful regardless of HN ranking, and the next launch (v0.4 with preview/edit) gets a second shot at attention.
+If traction is light: ship v0.5 anyway. The extension is useful regardless of HN ranking, and the next launch (v0.5 with preview/edit) gets a second shot at attention.

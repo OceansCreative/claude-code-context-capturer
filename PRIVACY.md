@@ -1,10 +1,10 @@
 # Privacy Policy
 
-Last updated: April 30, 2026
+Last updated: May 2, 2026
 
 ## Overview
 
-Claude Code Context Capturer ("the extension") is a browser extension that converts the web page you are currently viewing into Markdown text and copies it to your clipboard. This document describes what data the extension handles and how.
+Claude Code Context Capturer ("the extension") is a browser extension that converts the web page you are currently viewing into Markdown text and either copies it to your clipboard or appends it to a file you have explicitly linked. This document describes what data the extension handles and how.
 
 ## Data we DO NOT collect
 
@@ -17,7 +17,7 @@ The extension does not collect, transmit, sell, or share any of the following:
 - Usage analytics or telemetry
 - Cookies or tracking identifiers
 
-The extension does not communicate with any external server. All processing happens locally in your browser.
+The extension itself does not communicate with any external server. The only outbound network traffic happens **inside the page you are capturing**, and only when you explicitly trigger a capture — see "claude.ai conversation capture" below.
 
 ## Data we DO process locally
 
@@ -29,9 +29,33 @@ The extension processes the following on your device only:
 | Your selected text (if you use "Capture selection") | Convert it to Markdown for you | Memory only — discarded after the operation |
 | The Markdown output | Place it on your system clipboard | System clipboard (managed by your OS) |
 | Buffered captures (if you opt into "Append to buffer" mode) | Let you export multiple captures together later | `chrome.storage.local` on your device |
-| Your settings (frontmatter on/off, locale, etc.) | Persist your preferences | `chrome.storage.sync` on your device, optionally synced via your Chrome account |
+| Linked CLAUDE.md file handles (if you opt into "Append to linked CLAUDE.md file" mode, v0.2.0+) | Persist the FileSystemFileHandle the user picked so subsequent captures can append to the same file | `IndexedDB` on your device |
+| URL routing rules (v0.3.0+) | Route different sites to different `CLAUDE.md` files | `IndexedDB` on your device |
+| Your settings (frontmatter on/off, locale, default mode, etc.) | Persist your preferences | `chrome.storage.sync` on your device, optionally synced via your Chrome account |
 
 None of this data leaves your device through the extension.
+
+## claude.ai conversation capture (v0.4.0+)
+
+When you capture a conversation on `claude.ai/chat/<id>`:
+
+- The extension calls **claude.ai's own internal REST API** (`/api/organizations` and `/api/organizations/{org}/chat_conversations/{id}?tree=True`) **from within the claude.ai tab itself**, using your already-authenticated session
+- These requests are **same-origin** — they go to claude.ai, not to any server operated by the extension author or a third party
+- The conversation data the API returns is processed in your browser to build the Markdown output, then handled exactly like any other capture (clipboard / buffer / linked file)
+- The extension never transmits your conversation to anywhere other than the destinations you have configured (clipboard, in-extension buffer on your device, or your own linked `CLAUDE.md` file on your disk)
+
+You can verify this by inspecting the source: `src/content/parsers/claude-ai.ts` in this repository.
+
+## File System Access (v0.2.0+)
+
+If you choose the "Append to linked CLAUDE.md file" mode, the extension uses the [File System Access API](https://wicg.github.io/file-system-access/) to read and append to a file you explicitly pick. Specifically:
+
+- You pick the file once via the OS file dialog (a user gesture)
+- Chrome stores the resulting `FileSystemFileHandle` in the extension's IndexedDB so subsequent captures can re-use it
+- The extension only reads and writes the file you picked — it cannot access any other file on your disk
+- Read/write permission is granted by you per file and may need to be re-granted after browser restart (Chrome's choice; the extension cannot bypass this)
+
+If you remove the linked file via the options page or uninstall the extension, the handle is forgotten.
 
 ## Permissions explained
 
@@ -40,9 +64,10 @@ The extension requests the following Chrome permissions:
 - **`activeTab`** — to read the page content only when you actively trigger a capture
 - **`clipboardWrite`** — to copy the Markdown output to your clipboard
 - **`storage`** — to save your settings and the optional capture buffer locally
-- **`scripting`** — to inject the clipboard write call into the active tab
+- **`scripting`** — to inject capture-related code into the active tab when you trigger a capture
 - **`contextMenus`** — to show "Capture page" / "Capture selection" right-click menu items
-- **`<all_urls>` host permission** — so that you can capture from any site you visit
+- **`offscreen`** — to host a hidden document where File System Access writes and clipboard writes can run (MV3 service workers cannot access these APIs directly; v0.2.0+)
+- **`<all_urls>` host permission** — so that you can capture from any site you visit. The extension does not run automatically on any page; capture only happens when you explicitly trigger it
 
 ## Third-party services
 
@@ -52,6 +77,8 @@ The extension uses two open-source libraries embedded in its code:
 - [Turndown](https://github.com/mixmark-io/turndown) for HTML-to-Markdown conversion
 
 Both run entirely in your browser. They do not transmit data anywhere.
+
+The extension also calls claude.ai's own internal API when you capture from claude.ai (see "claude.ai conversation capture" above). This communication is between your browser and claude.ai only, using your existing session — no third party is involved.
 
 ## Children's privacy
 

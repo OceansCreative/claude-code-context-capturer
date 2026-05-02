@@ -135,12 +135,13 @@ npm run build
 
 | 設定 | 説明 |
 |---|---|
-| Default action | キャプチャ時の動作（クリップボード / バッファ / 両方） |
+| Default action | キャプチャ時の動作（クリップボード / バッファ / リンク済み CLAUDE.md / 両方） |
 | Include YAML frontmatter | メタ情報の付与 |
 | Include source footer | フッターに出典 URL を付ける |
 | Wrap output in fenced code block | コードブロックで囲む（チャット直貼り用） |
 | Maximum body length | 本文の最大文字数（0 = 無制限） |
 | Locale | en / ja |
+| CLAUDE.md routes | 複数の `CLAUDE.md` を URL パターンで振り分け（v0.3.0+） |
 
 ## 🛠️ 開発
 
@@ -179,10 +180,11 @@ src/
 新しいサイトに対応したい場合、以下の手順で追加できます：
 
 1. `src/content/parsers/yoursite.ts` を作成
-2. `canHandleYourSite()` と `parseYourSite()` をエクスポート
-3. `src/content/parsers/dispatcher.ts` で先頭に追加
+2. `canHandleYourSite(): boolean` と `parseYourSite(): CapturedContext | Promise<CapturedContext>` をエクスポート
+   - DOM だけでパース可能なら同期、内部 API fetch が必要なら async（v0.4.0+ の dispatcher は async 化済み）
+3. `src/content/parsers/dispatcher.ts` で先頭に追加（より具体的なホスト判定が先に来るよう順序に注意）
 4. `src/shared/types.ts` の `ParserName` に追加
-5. `tests/parsers/yoursite.test.ts` でテストを追加
+5. `tests/parsers/yoursite.test.ts` でテストを追加（fetch を使う場合は `vi.fn()` でモック — `tests/parsers/claude-ai.test.ts` を参考に）
 
 Pull Request 歓迎です。
 
@@ -288,10 +290,10 @@ Then in Chrome:
 Pull requests are welcome! To add support for a new site:
 
 1. Create `src/content/parsers/yoursite.ts`
-2. Export `canHandleYourSite()` and `parseYourSite()`
-3. Register it at the top of `src/content/parsers/dispatcher.ts`
+2. Export `canHandleYourSite(): boolean` and `parseYourSite(): CapturedContext | Promise<CapturedContext>` — sync if DOM-only, async if you need to call the site's internal API (the dispatcher has been async since v0.4.0)
+3. Register it at the top of `src/content/parsers/dispatcher.ts` (order matters: more specific host checks first)
 4. Add the name to `ParserName` in `src/shared/types.ts`
-5. Add tests in `tests/parsers/yoursite.test.ts`
+5. Add tests in `tests/parsers/yoursite.test.ts` — see `tests/parsers/claude-ai.test.ts` for an example with mocked `fetch`
 
 ## License
 
