@@ -91,9 +91,9 @@ I see the same.
 
 ## 🚀 インストール
 
-### Chrome ウェブストア（推奨）
+### Chrome ウェブストア
 
-[Coming soon - 審査中]
+現在審査中です。公開までは [最新リリース](https://github.com/OceansCreative/claude-code-context-capturer/releases/latest) の zip をダウンロードするか、下記「開発版を直接インストール」の手順をご利用ください。
 
 ### 開発版を直接インストール
 
@@ -265,9 +265,9 @@ In short: a clipper purpose-built for AI agent context files. If you want a gene
 
 ## Installation
 
-### Chrome Web Store (recommended)
+### Chrome Web Store
 
-[Coming soon - in review]
+Currently in review. Until it's live, download the zip from the [latest release](https://github.com/OceansCreative/claude-code-context-capturer/releases/latest) or follow the "Manual install" steps below.
 
 ### Manual install
 
