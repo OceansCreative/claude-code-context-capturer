@@ -105,6 +105,12 @@ function expandHome(p: string): string {
   return path.resolve(p);
 }
 
+export type DirStatus =
+  | { kind: 'ok'; fileCount: number }
+  | { kind: 'missing' }
+  | { kind: 'not-a-directory' }
+  | { kind: 'unreadable'; message: string };
+
 export class ContextStore {
   constructor(public readonly dir: string) {}
 
@@ -115,6 +121,33 @@ export class ContextStore {
       return stat.isDirectory();
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Diagnose the contexts directory for startup logging. Distinguishes the
+   * failure modes that otherwise produce silent "I captured something but
+   * Claude Code can't see it" confusion: the path doesn't exist, points at a
+   * file, or can't be read.
+   */
+  async status(): Promise<DirStatus> {
+    let stat;
+    try {
+      stat = await fs.stat(this.dir);
+    } catch (err) {
+      const e = err as NodeJS.ErrnoException;
+      if (e.code === 'ENOENT') return { kind: 'missing' };
+      return { kind: 'unreadable', message: e.message };
+    }
+    if (!stat.isDirectory()) return { kind: 'not-a-directory' };
+    try {
+      const names = await fs.readdir(this.dir);
+      const fileCount = names.filter((n) =>
+        MARKDOWN_EXTENSIONS.has(path.extname(n).toLowerCase())
+      ).length;
+      return { kind: 'ok', fileCount };
+    } catch (err) {
+      return { kind: 'unreadable', message: (err as Error).message };
     }
   }
 
@@ -175,6 +208,29 @@ export class ContextStore {
     const stat = await fs.stat(filePath);
     const slug = name.replace(/\.(md|markdown)$/i, '');
     return parseContextFile(slug, filePath, raw, stat.size);
+  }
+}
+
+/**
+ * Human-readable one-line summary of a DirStatus, for stderr boot logging and
+ * for the "no contexts" guidance returned to the agent. `dir` is the resolved
+ * absolute path so the user can see exactly where the server is looking.
+ */
+export function describeStatus(dir: string, status: DirStatus): string {
+  switch (status.kind) {
+    case 'ok':
+      return `Watching ${status.fileCount} capture(s) in: ${dir}`;
+    case 'missing':
+      return (
+        `Captures directory does not exist yet: ${dir}\n` +
+        `It will be created by the browser extension on first capture. ` +
+        `Make sure the extension's linked MCP directory resolves to this same ` +
+        `absolute path.`
+      );
+    case 'not-a-directory':
+      return `Configured captures path is a file, not a directory: ${dir}`;
+    case 'unreadable':
+      return `Cannot read captures directory: ${dir} (${status.message})`;
   }
 }
 

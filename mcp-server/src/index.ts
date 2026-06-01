@@ -23,7 +23,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { ContextStore, resolveContextsDir, toSummary } from './store.js';
+import {
+  ContextStore,
+  resolveContextsDir,
+  toSummary,
+  describeStatus,
+} from './store.js';
 import { searchContexts } from './search.js';
 
 const VERSION = '0.1.0';
@@ -75,7 +80,7 @@ server.registerTool(
     const summaries = filtered.slice(0, limit ?? 50).map(toSummary);
 
     if (summaries.length === 0) {
-      return textResult(emptyMessage(parser));
+      return textResult(await emptyMessage(parser));
     }
 
     const header = `${summaries.length} captured context(s) in ${contextsDir}:\n`;
@@ -214,8 +219,17 @@ function formatSummaryLine(s: ReturnType<typeof toSummary>): string {
   return parts.join('');
 }
 
-function emptyMessage(parser?: string): string {
-  const where = `Captures directory: ${contextsDir}`;
+async function emptyMessage(parser?: string): Promise<string> {
+  const status = await store.status();
+  const where = describeStatus(contextsDir, status);
+
+  // A misconfigured directory (missing / file / unreadable) is the real
+  // problem far more often than "no captures yet" — surface it directly so
+  // the agent can relay the fix instead of saying "nothing found".
+  if (status.kind !== 'ok') {
+    return `No captured contexts available.\n${where}`;
+  }
+
   if (parser) {
     return `No captured contexts with source "${parser}".\n${where}`;
   }
@@ -235,9 +249,20 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // stdout is the JSON-RPC channel — log only to stderr.
-  console.error(
-    `[ccc-mcp] v${VERSION} ready. Watching captures in: ${contextsDir}`
-  );
+  // Emit a clear startup diagnostic so the #1 silent failure mode ("I
+  // captured something but Claude Code can't see it") is immediately
+  // visible: it almost always means this resolved path differs from where
+  // the extension writes.
+  const status = await store.status();
+  console.error(`[ccc-mcp] v${VERSION} ready.`);
+  console.error(`[ccc-mcp] ${describeStatus(contextsDir, status)}`);
+  if (status.kind !== 'ok') {
+    console.error(
+      `[ccc-mcp] hint: this is the absolute path the server resolved from ` +
+        `its arguments and working directory. If captures don't appear, the ` +
+        `extension is likely writing to a different folder.`
+    );
+  }
 }
 
 main().catch((error) => {

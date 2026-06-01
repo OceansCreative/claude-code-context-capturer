@@ -114,6 +114,23 @@ tags: ["model:claude-opus-4"]
 Files without frontmatter are still served (the whole file becomes the body, and
 the title falls back to the first heading or the filename).
 
+## Troubleshooting
+
+**"I captured something but Claude Code can't see it."** This almost always
+means the server and the extension disagree on *which directory* to use. The
+server logs the exact absolute path it resolved on startup (to stderr):
+
+```
+[ccc-mcp] Watching 3 capture(s) in: /Users/you/project/.ccc-contexts
+```
+
+If you instead see `does not exist`, `is a file, not a directory`, or a count of
+`0` when you expect captures, compare that absolute path against the directory
+you linked in the extension's options page — they must resolve to the **same
+folder**. The most common cause is a relative path (`./.ccc-contexts`) resolving
+against an unexpected working directory; use an absolute path in the MCP config
+if in doubt. The `list_contexts` tool surfaces the same diagnostic to the agent.
+
 ## Develop
 
 ```bash

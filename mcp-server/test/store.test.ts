@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+import { promises as fs } from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import {
   parseContextFile,
   splitFrontmatter,
   parseTags,
+  describeStatus,
+  ContextStore,
 } from '../src/store.js';
 import { searchContexts } from '../src/search.js';
 import type { ContextEntry } from '../src/store.js';
@@ -95,6 +100,46 @@ function entry(p: Partial<ContextEntry>): ContextEntry {
     bytes: p.bytes ?? 0,
   };
 }
+
+describe('ContextStore.status + describeStatus', () => {
+  let tmp: string;
+
+  beforeAll(async () => {
+    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'ccc-status-'));
+  });
+
+  afterAll(async () => {
+    await fs.rm(tmp, { recursive: true, force: true });
+  });
+
+  it('reports missing for a non-existent directory', async () => {
+    const store = new ContextStore(path.join(tmp, 'nope'));
+    const status = await store.status();
+    expect(status.kind).toBe('missing');
+    expect(describeStatus(store.dir, status)).toContain('does not exist');
+  });
+
+  it('reports not-a-directory when the path is a file', async () => {
+    const filePath = path.join(tmp, 'afile.md');
+    await fs.writeFile(filePath, '# hi');
+    const store = new ContextStore(filePath);
+    const status = await store.status();
+    expect(status.kind).toBe('not-a-directory');
+    expect(describeStatus(store.dir, status)).toContain('not a directory');
+  });
+
+  it('reports ok with a markdown file count', async () => {
+    const dir = path.join(tmp, 'good');
+    await fs.mkdir(dir);
+    await fs.writeFile(path.join(dir, 'a.md'), '# a');
+    await fs.writeFile(path.join(dir, 'b.markdown'), '# b');
+    await fs.writeFile(path.join(dir, 'ignore.txt'), 'nope');
+    const store = new ContextStore(dir);
+    const status = await store.status();
+    expect(status).toEqual({ kind: 'ok', fileCount: 2 });
+    expect(describeStatus(store.dir, status)).toContain('2 capture');
+  });
+});
 
 describe('searchContexts', () => {
   const entries = [
