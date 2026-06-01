@@ -4,7 +4,7 @@ import { appendToBuffer } from '@/shared/buffer-storage';
 import { buildEntryHeading } from '@/shared/file-appender';
 import { listRoutes } from '@/shared/handle-store';
 import { resolveRoute } from '@/shared/route-matcher';
-import { buildContextSlug } from '@/shared/slug';
+import { buildContextSlug, dedupePrefix } from '@/shared/slug';
 import { buildArtifactFiles } from '@/shared/artifact-file';
 import type {
   CapturedContext,
@@ -191,24 +191,26 @@ async function writeToMcpStore(
   ctx: CapturedContext,
   markdown: string
 ): Promise<void> {
-  const fileName = `${buildContextSlug(ctx)}.md`;
-  await writeOneMcpFile(fileName, markdown);
+  const baseSlug = buildContextSlug(ctx);
 
-  // If the capture carried code/document artifacts (claude.ai), also write one
-  // standalone file per artifact so `get_context` can return a single
+  // The complete set for this capture: the main file, plus one file per
+  // code/document artifact (claude.ai) so `get_context` can return a single
   // artifact's code directly — "one code = one file".
-  const artifactFiles = buildArtifactFiles(ctx);
-  for (const file of artifactFiles) {
-    await writeOneMcpFile(file.fileName, file.content);
-  }
-}
+  const files = [
+    { fileName: `${baseSlug}.md`, content: markdown },
+    ...buildArtifactFiles(ctx),
+  ];
 
-async function writeOneMcpFile(fileName: string, content: string): Promise<void> {
+  // Write as a replace-set: when this capture has a stable identity
+  // (dedupeKey, e.g. a claude.ai conversation), any previous version is removed
+  // first by its stable prefix — so re-capturing UPDATES it instead of
+  // accumulating duplicate snapshots, even if the conversation title changed.
+  const cleanupPrefix = ctx.dedupeKey ? dedupePrefix(ctx.dedupeKey) : null;
   const result = await sendToOffscreenWithRetry<OffscreenMcpStoreResult>({
     target: 'offscreen',
-    type: 'WRITE_TO_MCP_STORE',
-    fileName,
-    content,
+    type: 'WRITE_MCP_FILESET',
+    cleanupPrefix,
+    files,
   });
   if (!result?.ok) {
     const reason = result?.reason ?? 'write-failed';

@@ -87,3 +87,27 @@ function yamlValue(value: string): string {
   }
   return value;
 }
+
+/**
+ * Given all filenames in the store directory, return those belonging to a
+ * deduped capture identified by its stable `cleanupPrefix` (`ccc-<hash>`): the
+ * main `<prefix>-<title>.md` and any derived `<prefix>-<title>--*.md` files.
+ *
+ * Matching by the stable prefix (not the full slug) means a re-capture whose
+ * title changed still finds and replaces the prior version. Pure (no FS
+ * access) so it's directly testable.
+ */
+export function slugFileNamesToRemove(
+  names: string[],
+  cleanupPrefix: string
+): string[] {
+  if (!cleanupPrefix) return [];
+  // Match `<prefix>` followed by a slug boundary (`-` or `.`) so `ccc-ab12`
+  // doesn't accidentally match `ccc-ab123...`.
+  const re = new RegExp(`^${escapeRegExp(cleanupPrefix)}[-.]`);
+  return names.filter((name) => re.test(name) && /\.(md|markdown)$/i.test(name));
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}

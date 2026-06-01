@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildArtifactFiles } from '@/shared/artifact-file';
+import { buildArtifactFiles, slugFileNamesToRemove } from '@/shared/artifact-file';
 import type { CapturedContext } from '@/shared/types';
 
 function ctx(p: Partial<CapturedContext>): CapturedContext {
@@ -76,5 +76,45 @@ describe('buildArtifactFiles', () => {
       ctx({ artifacts: [{ language: 'py', content: 'print(1)' }] })
     );
     expect(files[0].fileName).toMatch(/--artifact-1\.md$/);
+  });
+});
+
+describe('slugFileNamesToRemove (silo prevention, prefix-based)', () => {
+  const dirNames = [
+    'ccc-1a2b3c-old-title.md', // main file (prior capture, old title)
+    'ccc-1a2b3c-old-title--middleware.md', // derived artifact
+    'ccc-1a2b3c-old-title--schema.md', // derived artifact
+    'ccc-1a2b3cX-other.md', // NOT ours: prefix boundary differs
+    'ccc-9z9z9z-other.md', // different conversation
+    'ccc-1a2b3c-old-title--note.txt', // not markdown
+    'README.md',
+  ];
+
+  it('selects all files for the prefix, even though the title differs', () => {
+    // We re-capture with a NEW title but the SAME conversation → same prefix.
+    expect(slugFileNamesToRemove(dirNames, 'ccc-1a2b3c').sort()).toEqual(
+      [
+        'ccc-1a2b3c-old-title.md',
+        'ccc-1a2b3c-old-title--middleware.md',
+        'ccc-1a2b3c-old-title--schema.md',
+      ].sort()
+    );
+  });
+
+  it('respects the prefix boundary (does not match ccc-1a2b3cX)', () => {
+    const removed = slugFileNamesToRemove(dirNames, 'ccc-1a2b3c');
+    expect(removed).not.toContain('ccc-1a2b3cX-other.md');
+  });
+
+  it('does not touch other conversations or non-markdown files', () => {
+    const removed = slugFileNamesToRemove(dirNames, 'ccc-1a2b3c');
+    expect(removed).not.toContain('ccc-9z9z9z-other.md');
+    expect(removed).not.toContain('ccc-1a2b3c-old-title--note.txt');
+    expect(removed).not.toContain('README.md');
+  });
+
+  it('returns empty for a non-matching or empty prefix', () => {
+    expect(slugFileNamesToRemove(dirNames, 'ccc-nomatch')).toEqual([]);
+    expect(slugFileNamesToRemove(dirNames, '')).toEqual([]);
   });
 });

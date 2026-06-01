@@ -5,15 +5,33 @@ import type { CapturedContext } from './types';
  * filename (`<slug>.md`) in the MCP contexts directory, and as the `slug`
  * identifier the MCP server's get/delete tools accept.
  *
- * Shape: `<date>-<title-or-host>-<short-hash>` so files sort chronologically,
- * stay human-readable, and never collide (the hash disambiguates same-title
- * captures).
+ * Two shapes:
+ *   - With a `dedupeKey` (e.g. a claude.ai conversation UUID): the slug leads
+ *     with a STABLE hash of the dedupeKey — `ccc-<hash>-<title>`. The hash
+ *     prefix is invariant across re-captures even if the conversation title
+ *     changes, so the MCP store can find and overwrite the previous version by
+ *     prefix ("no silos"). The title is appended only for readability.
+ *   - Without one: `<date>-<title-or-host>-<hash(url+capturedAt)>`, unique per
+ *     capture, so distinct pages/research never collide.
  */
 export function buildContextSlug(ctx: CapturedContext): string {
-  const date = (ctx.capturedAt || new Date().toISOString()).slice(0, 10); // YYYY-MM-DD
   const base = slugify(ctx.title) || slugify(hostOf(ctx.url)) || 'capture';
+  if (ctx.dedupeKey) {
+    // Stable hash leads; title is cosmetic and may change between captures.
+    return `${dedupePrefix(ctx.dedupeKey)}-${truncate(base, 50)}`;
+  }
+  const date = (ctx.capturedAt || new Date().toISOString()).slice(0, 10); // YYYY-MM-DD
   const hash = shortHash(`${ctx.url}\n${ctx.capturedAt}`);
   return `${date}-${truncate(base, 60)}-${hash}`;
+}
+
+/**
+ * The stable filename prefix for a dedupeKey: `ccc-<hash>`. Re-capturing the
+ * same subject yields the same prefix regardless of title, so the store can
+ * remove the prior version's files by matching this prefix.
+ */
+export function dedupePrefix(dedupeKey: string): string {
+  return `ccc-${shortHash(dedupeKey)}`;
 }
 
 function slugify(input: string): string {

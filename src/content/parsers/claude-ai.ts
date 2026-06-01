@@ -78,6 +78,10 @@ export async function parseClaudeAi(
       fromSelection: false,
       tags: tagsFor(conversation, artifacts),
       artifacts,
+      // Stable per conversation+mode: re-capturing artifacts-only updates the
+      // same file rather than creating a new snapshot. A separate suffix keeps
+      // it distinct from a full capture of the same conversation.
+      dedupeKey: `${conversationUuid}:artifacts`,
     };
   }
 
@@ -95,6 +99,9 @@ export async function parseClaudeAi(
     // Expose artifacts so mcp-store mode can split them into one file each,
     // even when the body is the full conversation.
     artifacts: artifacts.length > 0 ? artifacts : undefined,
+    // Stable per conversation: re-capturing the same chat overwrites the
+    // existing store file instead of accumulating duplicate snapshots.
+    dedupeKey: conversationUuid,
   };
 }
 

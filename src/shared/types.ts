@@ -23,6 +23,14 @@ export interface CapturedContext {
   /** True if this came from a user text selection (not the whole page). */
   fromSelection: boolean;
   /**
+   * Stable identity for this capture's *subject* (not this capture event).
+   * When set, re-capturing the same subject produces the same store slug, so
+   * the MCP store UPDATES the existing file instead of accumulating silos.
+   * claude.ai sets this to the conversation UUID. Unset → every capture is a
+   * new file (date + content hash).
+   */
+  dedupeKey?: string;
+  /**
    * Code/document artifacts detected in this capture (currently claude.ai
    * only). In `mcp-store` output mode these are written as one file each, so
    * `get_context` can return a single artifact's code directly. Other output
@@ -183,6 +191,20 @@ export type OffscreenMessage =
       fileName: string;
       /** Full file contents (frontmatter + body + footer). */
       content: string;
+    }
+  | {
+      target: 'offscreen';
+      type: 'WRITE_MCP_FILESET';
+      /**
+       * Stable filename prefix identifying this capture's previous version, or
+       * null for non-deduped captures. When set, any existing `<prefix>*.md`
+       * files are removed before the new set is written, so re-capturing the
+       * same subject UPDATES it (no duplicate silos / stale artifact files)
+       * even if the title changed.
+       */
+      cleanupPrefix: string | null;
+      /** The files to write: the main capture plus any per-artifact files. */
+      files: Array<{ fileName: string; content: string }>;
     }
   | {
       target: 'offscreen';
