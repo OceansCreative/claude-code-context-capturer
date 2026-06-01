@@ -1,6 +1,6 @@
 {
   "name": "claude-code-context-capturer",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Convert any web page into Claude Code-friendly Markdown context with one click.",
   "type": "module",
   "scripts": {

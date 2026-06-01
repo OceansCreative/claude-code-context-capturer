@@ -1,0 +1,48 @@
+{
+  "name": "claude-code-context-capturer-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that exposes web pages and claude.ai conversations captured by the Claude Code Context Capturer extension to Claude Code — on demand, without bloating CLAUDE.md.",
+  "type": "module",
+  "bin": {
+    "ccc-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc && chmod 755 dist/index.js",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude-code",
+    "claude-ai",
+    "anthropic",
+    "context-engineering",
+    "ai-coding"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OceansCreative/claude-code-context-capturer.git",
+    "directory": "mcp-server"
+  },
+  "author": "Kazushi Ikeda <https://oceans-base.com>",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.3",
+    "vitest": "^2.0.2"
+  }
+}

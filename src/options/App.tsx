@@ -15,6 +15,9 @@ import {
   listRoutes,
   saveRoute,
   deleteRoute,
+  saveMcpDir,
+  getMcpDir,
+  clearMcpDir,
 } from '@/shared/handle-store';
 import {
   DEFAULT_OPTIONS,
@@ -32,12 +35,68 @@ export default function App() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [buffer, setBuffer] = useState<BufferEntry[]>([]);
   const [routes, setRoutes] = useState<RouteRow[]>([]);
+  const [mcpDirName, setMcpDirName] = useState<string | null>(null);
+  const [mcpDirPermission, setMcpDirPermission] = useState<PermissionState | null>(null);
 
   useEffect(() => {
     void loadOptions().then(setOptions);
     void readBuffer().then(setBuffer);
     void refreshRoutes();
+    void refreshMcpDir();
   }, []);
+
+  async function refreshMcpDir() {
+    const dir = await getMcpDir();
+    if (!dir) {
+      setMcpDirName(null);
+      setMcpDirPermission(null);
+      return;
+    }
+    setMcpDirName(dir.name);
+    setMcpDirPermission(await dir.queryPermission({ mode: 'readwrite' }));
+  }
+
+  async function handleLinkMcpDir() {
+    if (!('showDirectoryPicker' in window)) {
+      alert('Your browser does not support the File System Access directory picker.');
+      return;
+    }
+    let dir: FileSystemDirectoryHandle;
+    try {
+      // @ts-expect-error showDirectoryPicker is not in older lib.dom typings
+      dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      alert(`Could not pick directory: ${err instanceof Error ? err.message : String(err)}`);
+      return;
+    }
+    const perm = await dir.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') {
+      alert('Write permission was not granted.');
+      return;
+    }
+    await saveMcpDir(dir);
+    await refreshMcpDir();
+  }
+
+  async function handleRegrantMcpDir() {
+    const dir = await getMcpDir();
+    if (!dir) return;
+    try {
+      await dir.requestPermission({ mode: 'readwrite' });
+      await refreshMcpDir();
+    } catch (err) {
+      alert(`Could not re-grant: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function handleUnlinkMcpDir() {
+    if (!confirm('Unlink the MCP contexts directory? Captured files on disk are not deleted.')) {
+      return;
+    }
+    await clearMcpDir();
+    await refreshMcpDir();
+  }
 
   async function refreshRoutes() {
     const list = await listRoutes();
@@ -192,6 +251,9 @@ export default function App() {
             <option value="clipboard">Copy to clipboard</option>
             <option value="append-buffer">Append to in-extension buffer</option>
             <option value="claude-md">Append to linked CLAUDE.md file</option>
+            <option value="mcp-store">
+              Save to MCP contexts directory (on-demand via Claude Code)
+            </option>
             <option value="both">Clipboard + buffer</option>
           </select>
         </Field>
@@ -353,6 +415,94 @@ export default function App() {
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="mb-10 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">MCP contexts directory</h2>
+          {mcpDirName ? (
+            <button
+              type="button"
+              onClick={() => void handleUnlinkMcpDir()}
+              className="rounded border border-rose-300 px-3 py-1.5 text-xs text-rose-700 hover:bg-rose-50"
+            >
+              Unlink
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void handleLinkMcpDir()}
+              className="rounded bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+            >
+              Link directory
+            </button>
+          )}
+        </div>
+        <p className="mb-4 text-xs text-slate-500">
+          With the <strong>&ldquo;Save to MCP contexts directory&rdquo;</strong>{' '}
+          output mode, each capture is written as a standalone{' '}
+          <code className="rounded bg-slate-100 px-1">.md</code> file here. The
+          companion MCP server then exposes these to Claude Code{' '}
+          <strong>on demand</strong> — so your research and claude.ai
+          conversations are available without bloating{' '}
+          <code className="rounded bg-slate-100 px-1">CLAUDE.md</code>.
+        </p>
+
+        {mcpDirName ? (
+          <div className="flex items-center gap-2">
+            <code className="rounded bg-slate-100 px-2 py-1 text-xs">
+              {mcpDirName}/
+            </code>
+            <span
+              className={
+                'rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ' +
+                (mcpDirPermission === 'granted'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-amber-100 text-amber-700')
+              }
+            >
+              {mcpDirPermission === 'granted' ? 'write granted' : 'needs re-grant'}
+            </span>
+            {mcpDirPermission !== 'granted' && (
+              <button
+                type="button"
+                onClick={() => void handleRegrantMcpDir()}
+                className="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50"
+              >
+                Re-grant
+              </button>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">
+            No directory linked yet. Captures in &ldquo;Save to MCP contexts
+            directory&rdquo; mode will fail until you link one.
+          </p>
+        )}
+
+        <details className="mt-4 text-xs text-slate-500">
+          <summary className="cursor-pointer font-medium text-slate-600">
+            How to connect this to Claude Code
+          </summary>
+          <ol className="ml-4 mt-2 list-decimal space-y-1">
+            <li>
+              Pick a directory inside your project (e.g.{' '}
+              <code className="rounded bg-slate-100 px-1">.ccc-contexts</code>).
+            </li>
+            <li>
+              Register the MCP server, pointing it at that directory:
+              <pre className="mt-1 overflow-x-auto rounded bg-slate-900 px-3 py-2 text-[11px] text-slate-100">
+{`claude mcp add ccc-contexts \\
+  -- npx -y claude-code-context-capturer-mcp \\
+  ./.ccc-contexts`}
+              </pre>
+            </li>
+            <li>
+              In Claude Code, ask it to{' '}
+              <em>list_contexts</em> or <em>search_contexts</em>.
+            </li>
+          </ol>
+        </details>
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">

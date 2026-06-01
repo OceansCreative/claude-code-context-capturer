@@ -13,6 +13,7 @@ const DB_VERSION = 2;
 const STORE_KV = 'kv';
 const STORE_ROUTES = 'routes';
 const LEGACY_KEY = 'claudeMdHandle';
+const MCP_DIR_KEY = 'mcpContextsDir';
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -69,6 +70,29 @@ export async function getRoute(id: string): Promise<ClaudeMdRoute | undefined> {
 /** Delete a route by id. */
 export async function deleteRoute(id: string): Promise<void> {
   await tx(STORE_ROUTES, 'readwrite', (s) => s.delete(id));
+}
+
+/**
+ * Persist the directory handle for the MCP contexts store. Captures in
+ * `mcp-store` output mode are written here as standalone `<slug>.md` files,
+ * which the companion MCP server reads to expose them to Claude Code.
+ */
+export async function saveMcpDir(handle: FileSystemDirectoryHandle): Promise<void> {
+  await tx(STORE_KV, 'readwrite', (s) => s.put(handle, MCP_DIR_KEY));
+}
+
+/** Read the saved MCP contexts directory handle, if any. */
+export async function getMcpDir(): Promise<FileSystemDirectoryHandle | undefined> {
+  return tx<FileSystemDirectoryHandle | undefined>(
+    STORE_KV,
+    'readonly',
+    (s) => s.get(MCP_DIR_KEY)
+  );
+}
+
+/** Forget the linked MCP contexts directory. */
+export async function clearMcpDir(): Promise<void> {
+  await tx(STORE_KV, 'readwrite', (s) => s.delete(MCP_DIR_KEY));
 }
 
 /**

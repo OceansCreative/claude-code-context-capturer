@@ -4,7 +4,7 @@ export default defineManifest({
   manifest_version: 3,
   name: 'Claude Code Context Capturer',
   short_name: 'CCC',
-  version: '0.4.3',
+  version: '0.5.0',
   description:
     'Convert any web page into Claude Code-friendly Markdown context with one click.',
   permissions: [

@@ -1,8 +1,9 @@
-import { getRoute } from '@/shared/handle-store';
+import { getRoute, getMcpDir } from '@/shared/handle-store';
 import { buildAppendBlock } from '@/shared/file-appender';
 import type {
   OffscreenAppendResult,
   OffscreenClipboardResult,
+  OffscreenMcpStoreResult,
   OffscreenMessage,
 } from '@/shared/types';
 
@@ -33,6 +34,10 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
     void appendToRoute(message.routeId, message.content, message.heading).then(
       sendResponse
     );
+    return true; // async response
+  }
+  if (message.type === 'WRITE_TO_MCP_STORE') {
+    void writeToMcpStore(message.fileName, message.content).then(sendResponse);
     return true; // async response
   }
   if (message.type === 'WRITE_TO_CLIPBOARD') {
@@ -76,6 +81,46 @@ async function appendToRoute(
     await writable.close();
 
     return { ok: true, fileName: route.handle.name };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, reason: 'write-failed', message: msg };
+  }
+}
+
+/**
+ * Write one capture as a standalone `<slug>.md` file into the linked MCP
+ * contexts directory. Each capture is its own file (not appended), so the
+ * companion MCP server can list/get/search them individually — and CLAUDE.md
+ * never bloats.
+ */
+async function writeToMcpStore(
+  fileName: string,
+  content: string
+): Promise<OffscreenMcpStoreResult> {
+  const dir = await getMcpDir();
+  if (!dir) {
+    return {
+      ok: false,
+      reason: 'no-handle',
+      message: 'No MCP contexts directory is linked. Link one in the options page.',
+    };
+  }
+
+  const perm = await dir.queryPermission({ mode: 'readwrite' });
+  if (perm !== 'granted') {
+    return {
+      ok: false,
+      reason: 'permission-denied',
+      message: 'Re-link the MCP contexts directory from the options page to grant write access.',
+    };
+  }
+
+  try {
+    const fileHandle = await dir.getFileHandle(fileName, { create: true });
+    const writable = await fileHandle.createWritable({ keepExistingData: false });
+    await writable.write(content);
+    await writable.close();
+    return { ok: true, fileName };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ok: false, reason: 'write-failed', message: msg };

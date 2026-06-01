@@ -4,10 +4,12 @@ import { appendToBuffer } from '@/shared/buffer-storage';
 import { buildEntryHeading } from '@/shared/file-appender';
 import { listRoutes } from '@/shared/handle-store';
 import { resolveRoute } from '@/shared/route-matcher';
+import { buildContextSlug } from '@/shared/slug';
 import type {
   CapturedContext,
   OffscreenAppendResult,
   OffscreenClipboardResult,
+  OffscreenMcpStoreResult,
   OffscreenMessage,
   RuntimeMessage,
   UserOptions,
@@ -165,6 +167,32 @@ async function deliver(
   }
   if (options.defaultMode === 'claude-md') {
     await appendToClaudeMd(ctx, markdown);
+  }
+  if (options.defaultMode === 'mcp-store') {
+    await writeToMcpStore(ctx, markdown);
+  }
+}
+
+/**
+ * Write the capture as a standalone `<slug>.md` file into the linked MCP
+ * contexts directory (via the offscreen document's FSA access). The companion
+ * MCP server reads that directory to expose captures to Claude Code on demand.
+ */
+async function writeToMcpStore(
+  ctx: CapturedContext,
+  markdown: string
+): Promise<void> {
+  const fileName = `${buildContextSlug(ctx)}.md`;
+  const result = await sendToOffscreenWithRetry<OffscreenMcpStoreResult>({
+    target: 'offscreen',
+    type: 'WRITE_TO_MCP_STORE',
+    fileName,
+    content: markdown,
+  });
+  if (!result?.ok) {
+    const reason = result?.reason ?? 'write-failed';
+    const detail = result?.message ?? 'Unknown error';
+    throw new Error(`${reason}: ${detail}`);
   }
 }
 

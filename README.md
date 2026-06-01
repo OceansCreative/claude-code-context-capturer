@@ -56,6 +56,7 @@ I see the same.
 - **CLAUDE.md への直書き** *(v0.2.0+)*：プロジェクトの `CLAUDE.md` を一度ピックすれば、以降のキャプチャは File System Access API 経由で自動 append。コピペ不要
 - **マルチプロジェクト振り分け** *(v0.3.0+)*：URL パターン（glob）で複数の CLAUDE.md を使い分け。例：`github.com/anthropic/*` → anthropic 用、`zenn.dev/*` → 個人メモ、無マッチは default ルート
 - **claude.ai 会話のキャプチャ** *(v0.4.0+)*：claude.ai でブレストした会話をワンクリックで CLAUDE.md に流し込み。share リンクの 403 問題、手コピペの労力を解消。内部 API を叩いて thinking blocks・tool_use・branch 構造まで保持
+- **MCP 経由でオンデマンド参照** *(v0.5.0+)*：キャプチャを `CLAUDE.md` に追記する代わりに、専用ディレクトリへ 1 件 1 ファイルで保存し、付属の [MCP サーバ](./mcp-server) が Claude Code に**必要なときだけ**渡します。Anthropic 公式の「`CLAUDE.md` は小さく保て（肥大化すると指示が無視される）」ガイドと整合し、コンテキストを汚しません。`list_contexts` / `search_contexts` / `get_context` で検索・取得できます。→ [セットアップ](./mcp-server/README.md)
 - **キャプチャバッファ**：複数ページをまとめて溜めて、後から一括エクスポート
 - **キーボードショートカット**：
   - `Ctrl+Shift+L`（macOS: `Cmd+Shift+L`）：ページ全体
@@ -257,6 +258,7 @@ In short: a clipper purpose-built for AI agent context files. If you want a gene
 - **Direct CLAUDE.md write** *(v0.2.0+)* — Link a `CLAUDE.md` once via the File System Access API; subsequent captures append directly, no copy/paste
 - **Multi-project routing** *(v0.3.0+)* — Link multiple `CLAUDE.md` files with URL glob patterns. Captures from `github.com/anthropic/*` go to one file, `zenn.dev/*` to another, unmatched URLs to a default route
 - **claude.ai conversation capture** *(v0.4.0+)* — Capture your claude.ai brainstorm conversation in one click. Bypasses the 403-on-share-link issue and the manual copy-paste loop. Hits claude.ai's internal API to preserve thinking blocks, tool_use entries, and branch structure that DOM scraping would miss
+- **On-demand access via MCP** *(v0.5.0+)* — Instead of appending to `CLAUDE.md`, save each capture as a standalone file in a directory, and let the bundled [MCP server](./mcp-server) hand them to Claude Code **only when it asks**. This aligns with Anthropic's own guidance to keep `CLAUDE.md` small (bloated context files make Claude ignore your instructions) — your research stays available without polluting context. Searchable via `list_contexts` / `search_contexts` / `get_context`. → [Setup](./mcp-server/README.md)
 - **Buffer mode** — Stack multiple captures and export all at once
 - **Keyboard shortcuts**:
   - `Ctrl+Shift+L` (Cmd+Shift+L on macOS) — capture page

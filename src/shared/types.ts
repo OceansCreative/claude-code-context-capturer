@@ -59,6 +59,12 @@ export type OutputMode =
   | 'append-buffer'
   /** Append to the user-linked CLAUDE.md file on disk. */
   | 'claude-md'
+  /**
+   * Write each capture as a standalone Markdown file into the linked MCP
+   * contexts directory, where the companion MCP server exposes it to Claude
+   * Code on demand (without bloating CLAUDE.md).
+   */
+  | 'mcp-store'
   /** Clipboard + buffer. */
   | 'both';
 
@@ -123,6 +129,14 @@ export type OffscreenMessage =
     }
   | {
       target: 'offscreen';
+      type: 'WRITE_TO_MCP_STORE';
+      /** Filename (without directory), e.g. `2026-05-31-auth-plan-1a2b3c.md`. */
+      fileName: string;
+      /** Full file contents (frontmatter + body + footer). */
+      content: string;
+    }
+  | {
+      target: 'offscreen';
       type: 'WRITE_TO_CLIPBOARD';
       /** Text to place on the system clipboard. */
       content: string;
@@ -147,6 +161,15 @@ export type OffscreenAppendResult =
       message: string;
     };
 
+/** Result returned from the offscreen document for MCP-store writes. */
+export type OffscreenMcpStoreResult =
+  | { ok: true; fileName: string }
+  | {
+      ok: false;
+      reason: 'no-handle' | 'permission-denied' | 'write-failed';
+      message: string;
+    };
+
 /** Result returned from the offscreen document for clipboard writes. */
 export type OffscreenClipboardResult =
   | { ok: true }
@@ -156,4 +179,7 @@ export type OffscreenClipboardResult =
  * Generic offscreen response — the union of all offscreen-handled message
  * results. Callers narrow by which message they sent.
  */
-export type OffscreenResult = OffscreenAppendResult | OffscreenClipboardResult;
+export type OffscreenResult =
+  | OffscreenAppendResult
+  | OffscreenMcpStoreResult
+  | OffscreenClipboardResult;
