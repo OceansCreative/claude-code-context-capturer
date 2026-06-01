@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { RuntimeMessage } from '@/shared/types';
+import type { RuntimeMessage, UserOptions } from '@/shared/types';
 import { readBuffer, type BufferEntry } from '@/shared/buffer-storage';
+import { loadOptions, saveOptions } from '@/shared/options-storage';
 
 type Status = 'idle' | 'capturing' | 'success' | 'error';
 
@@ -8,14 +9,39 @@ export default function App() {
   const [status, setStatus] = useState<Status>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [buffer, setBuffer] = useState<BufferEntry[]>([]);
+  const [options, setOptions] = useState<UserOptions | null>(null);
+  const [isClaudeAi, setIsClaudeAi] = useState(false);
 
   useEffect(() => {
     void refreshBuffer();
+    void loadOptions().then(setOptions);
+    void detectClaudeAi();
   }, []);
 
   async function refreshBuffer() {
     const entries = await readBuffer();
     setBuffer(entries);
+  }
+
+  async function detectClaudeAi() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const url = tab?.url ?? '';
+      setIsClaudeAi(/^https:\/\/claude\.ai\/chat\/[0-9a-f-]{8,}/i.test(url));
+    } catch {
+      setIsClaudeAi(false);
+    }
+  }
+
+  /** Persist a single option change immediately (next capture picks it up). */
+  async function patchOption<K extends keyof UserOptions>(
+    key: K,
+    value: UserOptions[K]
+  ) {
+    if (!options) return;
+    const next = { ...options, [key]: value };
+    setOptions(next);
+    await saveOptions(next);
   }
 
   async function dispatch(type: 'CAPTURE_PAGE' | 'CAPTURE_SELECTION') {
@@ -76,6 +102,52 @@ export default function App() {
           Capture selection
         </button>
       </div>
+
+      {isClaudeAi && options && (
+        <section className="mt-3 rounded border border-violet-200 bg-violet-50 p-2.5">
+          <h2 className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-violet-700">
+            <span aria-hidden>✦</span> claude.ai chat
+          </h2>
+
+          <label className="flex cursor-pointer items-center justify-between gap-2 text-xs text-slate-700">
+            <span>
+              <span className="font-medium">Artifacts only</span>
+              <span className="block text-[10px] text-slate-500">
+                Capture just the code/docs Claude wrote
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={options.claudeAiArtifactsOnly}
+              onChange={(e) =>
+                void patchOption('claudeAiArtifactsOnly', e.target.checked)
+              }
+              className="h-4 w-4 shrink-0 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+            />
+          </label>
+
+          <label className="mt-2 flex items-center justify-between gap-2 text-xs text-slate-700">
+            <span>
+              <span className="font-medium">Last N messages</span>
+              <span className="block text-[10px] text-slate-500">
+                0 = whole conversation
+              </span>
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={options.claudeAiMaxMessages}
+              onChange={(e) =>
+                void patchOption(
+                  'claudeAiMaxMessages',
+                  Math.max(0, Number(e.target.value))
+                )
+              }
+              className="w-16 shrink-0 rounded border border-slate-300 px-2 py-1 text-xs"
+            />
+          </label>
+        </section>
+      )}
 
       {status === 'success' && (
         <p className="mt-3 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700">

@@ -22,6 +22,39 @@ export interface CapturedContext {
   parser: ParserName;
   /** True if this came from a user text selection (not the whole page). */
   fromSelection: boolean;
+  /**
+   * Stable identity for this capture's *subject* (not this capture event).
+   * When set, re-capturing the same subject produces the same store slug, so
+   * the MCP store UPDATES the existing file instead of accumulating silos.
+   * claude.ai sets this to the conversation UUID. Unset → every capture is a
+   * new file (date + content hash).
+   */
+  dedupeKey?: string;
+  /**
+   * Code/document artifacts detected in this capture (currently claude.ai
+   * only). In `mcp-store` output mode these are written as one file each, so
+   * `get_context` can return a single artifact's code directly. Other output
+   * modes ignore this (the artifacts are already rendered inside `body`).
+   */
+  artifacts?: CapturedArtifact[];
+  /**
+   * When this context IS a single extracted artifact (one file per artifact),
+   * the slug of the parent capture it came from. Surfaced in frontmatter as
+   * `artifact_of` so the conversation it belongs to is discoverable.
+   */
+  artifactOf?: string;
+}
+
+/** A single code or document artifact extracted from a capture. */
+export interface CapturedArtifact {
+  /** Stable artifact id from the source, when available. */
+  id?: string;
+  /** Human title, e.g. "Auth middleware". */
+  title?: string;
+  /** Fence language hint, e.g. "ts", "python", "markdown". */
+  language?: string;
+  /** The artifact body (raw code/document text). */
+  content: string;
 }
 
 /** Names of all built-in parsers. */
@@ -49,6 +82,28 @@ export interface UserOptions {
   defaultMode: OutputMode;
   /** Locale for date formatting and built-in messages. */
   locale: 'en' | 'ja';
+  /**
+   * claude.ai capture: extract only artifacts (code/documents Claude wrote),
+   * dropping the surrounding conversation. Ideal for pulling "the code from
+   * that chat" into a project without the brainstorming noise.
+   */
+  claudeAiArtifactsOnly: boolean;
+  /**
+   * claude.ai capture: keep only the last N messages of the conversation
+   * (0 = the whole thing). Trims long planning threads down to the part that
+   * matters before it lands in your context.
+   */
+  claudeAiMaxMessages: number;
+}
+
+/**
+ * Capture-time options forwarded from the service worker to the content-script
+ * parsers. A small, parser-relevant subset of UserOptions — the parser runs in
+ * the page and shouldn't reach into chrome.storage itself.
+ */
+export interface CaptureOptions {
+  claudeAiArtifactsOnly?: boolean;
+  claudeAiMaxMessages?: number;
 }
 
 /** Where the captured Markdown should go. */
@@ -59,6 +114,12 @@ export type OutputMode =
   | 'append-buffer'
   /** Append to the user-linked CLAUDE.md file on disk. */
   | 'claude-md'
+  /**
+   * Write each capture as a standalone Markdown file into the linked MCP
+   * contexts directory, where the companion MCP server exposes it to Claude
+   * Code on demand (without bloating CLAUDE.md).
+   */
+  | 'mcp-store'
   /** Clipboard + buffer. */
   | 'both';
 
@@ -69,12 +130,14 @@ export const DEFAULT_OPTIONS: UserOptions = {
   maxBodyLength: 0,
   defaultMode: 'clipboard',
   locale: 'en',
+  claudeAiArtifactsOnly: false,
+  claudeAiMaxMessages: 0,
 };
 
 /** Messages exchanged between background and content scripts. */
 export type RuntimeMessage =
-  | { type: 'CAPTURE_PAGE' }
-  | { type: 'CAPTURE_SELECTION' }
+  | { type: 'CAPTURE_PAGE'; options?: CaptureOptions }
+  | { type: 'CAPTURE_SELECTION'; options?: CaptureOptions }
   | { type: 'CAPTURE_RESULT'; payload: CapturedContext }
   | { type: 'CAPTURE_ERROR'; error: string };
 
@@ -123,6 +186,28 @@ export type OffscreenMessage =
     }
   | {
       target: 'offscreen';
+      type: 'WRITE_TO_MCP_STORE';
+      /** Filename (without directory), e.g. `2026-05-31-auth-plan-1a2b3c.md`. */
+      fileName: string;
+      /** Full file contents (frontmatter + body + footer). */
+      content: string;
+    }
+  | {
+      target: 'offscreen';
+      type: 'WRITE_MCP_FILESET';
+      /**
+       * Stable filename prefix identifying this capture's previous version, or
+       * null for non-deduped captures. When set, any existing `<prefix>*.md`
+       * files are removed before the new set is written, so re-capturing the
+       * same subject UPDATES it (no duplicate silos / stale artifact files)
+       * even if the title changed.
+       */
+      cleanupPrefix: string | null;
+      /** The files to write: the main capture plus any per-artifact files. */
+      files: Array<{ fileName: string; content: string }>;
+    }
+  | {
+      target: 'offscreen';
       type: 'WRITE_TO_CLIPBOARD';
       /** Text to place on the system clipboard. */
       content: string;
@@ -147,6 +232,15 @@ export type OffscreenAppendResult =
       message: string;
     };
 
+/** Result returned from the offscreen document for MCP-store writes. */
+export type OffscreenMcpStoreResult =
+  | { ok: true; fileName: string }
+  | {
+      ok: false;
+      reason: 'no-handle' | 'permission-denied' | 'write-failed';
+      message: string;
+    };
+
 /** Result returned from the offscreen document for clipboard writes. */
 export type OffscreenClipboardResult =
   | { ok: true }
@@ -156,4 +250,7 @@ export type OffscreenClipboardResult =
  * Generic offscreen response — the union of all offscreen-handled message
  * results. Callers narrow by which message they sent.
  */
-export type OffscreenResult = OffscreenAppendResult | OffscreenClipboardResult;
+export type OffscreenResult =
+  | OffscreenAppendResult
+  | OffscreenMcpStoreResult
+  | OffscreenClipboardResult;

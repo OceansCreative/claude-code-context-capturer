@@ -3,6 +3,8 @@ import {
   canHandleClaudeAi,
   parseClaudeAi,
   orderedMessages,
+  collectArtifacts,
+  artifactFromInput,
 } from '@/content/parsers/claude-ai';
 
 const ORG_UUID = 'org-uuid-1';
@@ -226,5 +228,239 @@ describe('parseClaudeAi (with mocked fetch)', () => {
   it('errors out cleanly when the URL has no conversation UUID', async () => {
     setLocation('https://claude.ai/chats');
     await expect(parseClaudeAi()).rejects.toThrow(/extract a conversation ID/i);
+  });
+
+  // -------------------------------------------------------------------------
+  // Artifact extraction + capture options
+  // -------------------------------------------------------------------------
+
+  function mockArtifactConversation() {
+    fetchMock.mockImplementation(async (input: string) => {
+      if (input === '/api/organizations') return jsonResponse([{ uuid: ORG_UUID }]);
+      if (input.endsWith(`/chat_conversations/${CONVERSATION_UUID}`)) return jsonResponse({});
+      if (input.includes('?tree=True')) {
+        return jsonResponse({
+          uuid: CONVERSATION_UUID,
+          name: 'Build auth middleware',
+          model: 'claude-opus-4',
+          current_leaf_message_uuid: 'm4',
+          chat_messages: [
+            {
+              uuid: 'm1',
+              sender: 'human',
+              content: [{ type: 'text', text: 'Write auth middleware.' }],
+            },
+            {
+              uuid: 'm2',
+              sender: 'assistant',
+              parent_message_uuid: 'm1',
+              content: [
+                { type: 'text', text: 'Here you go.' },
+                {
+                  type: 'tool_use',
+                  name: 'artifacts',
+                  input: {
+                    command: 'create',
+                    id: 'auth-mw',
+                    type: 'application/vnd.ant.code',
+                    language: 'ts',
+                    title: 'Auth middleware',
+                    content: 'export const auth = () => {};',
+                  },
+                },
+              ],
+            },
+            {
+              uuid: 'm3',
+              sender: 'human',
+              parent_message_uuid: 'm2',
+              content: [{ type: 'text', text: 'Add logging.' }],
+            },
+            {
+              uuid: 'm4',
+              sender: 'assistant',
+              parent_message_uuid: 'm3',
+              content: [
+                {
+                  type: 'tool_use',
+                  name: 'artifacts',
+                  input: {
+                    command: 'rewrite',
+                    id: 'auth-mw',
+                    type: 'application/vnd.ant.code',
+                    language: 'ts',
+                    title: 'Auth middleware',
+                    content: 'export const auth = () => { log(); };',
+                  },
+                },
+              ],
+            },
+          ],
+        });
+      }
+      throw new Error(`unexpected: ${input}`);
+    });
+  }
+
+  it('renders artifacts as clean code blocks inside a full capture', async () => {
+    mockArtifactConversation();
+    const ctx = await parseClaudeAi();
+    expect(ctx.body).toContain('#### Auth middleware');
+    expect(ctx.body).toContain('```ts');
+    expect(ctx.body).toContain('export const auth');
+    // Not dumped as raw JSON.
+    expect(ctx.body).not.toContain('"command": "create"');
+  });
+
+  it('artifacts-only mode keeps only the final artifact version, no chat', async () => {
+    mockArtifactConversation();
+    const ctx = await parseClaudeAi({ claudeAiArtifactsOnly: true });
+    expect(ctx.title).toBe('Build auth middleware');
+    expect(ctx.body).toContain('# Build auth middleware — artifacts');
+    // Final (rewrite) version wins; intermediate create is gone.
+    expect(ctx.body).toContain('export const auth = () => { log(); };');
+    expect(ctx.body).not.toContain('export const auth = () => {};');
+    // Conversation text is dropped.
+    expect(ctx.body).not.toContain('Add logging.');
+    expect(ctx.body).not.toContain('## Human');
+    expect(ctx.tags).toContain('artifacts-only');
+    expect(ctx.tags).toContain('lang:ts');
+  });
+
+  it('artifacts-only throws a friendly error when there are no artifacts', async () => {
+    fetchMock.mockImplementation(async (input: string) => {
+      if (input === '/api/organizations') return jsonResponse([{ uuid: ORG_UUID }]);
+      if (input.endsWith(`/chat_conversations/${CONVERSATION_UUID}`)) return jsonResponse({});
+      if (input.includes('?tree=True')) {
+        return jsonResponse({
+          uuid: CONVERSATION_UUID,
+          name: 'No artifacts here',
+          chat_messages: [
+            { uuid: 'm1', sender: 'human', content: [{ type: 'text', text: 'hi' }] },
+          ],
+        });
+      }
+      throw new Error(`unexpected: ${input}`);
+    });
+    await expect(parseClaudeAi({ claudeAiArtifactsOnly: true })).rejects.toThrow(
+      /No artifacts found/i
+    );
+  });
+
+  it('maxMessages keeps only the last N messages', async () => {
+    mockArtifactConversation();
+    const ctx = await parseClaudeAi({ claudeAiMaxMessages: 1 });
+    // Only m4 (the last assistant turn with the rewrite) remains.
+    expect(ctx.body).toContain('export const auth = () => { log(); };');
+    expect(ctx.body).not.toContain('Write auth middleware.');
+    expect(ctx.body).not.toContain('Add logging.');
+  });
+});
+
+describe('artifactFromInput', () => {
+  it('parses a well-formed artifact input', () => {
+    const art = artifactFromInput({
+      id: 'x',
+      title: 'T',
+      language: 'python',
+      type: 'application/vnd.ant.code',
+      content: 'print(1)',
+    });
+    expect(art).toEqual({
+      id: 'x',
+      title: 'T',
+      language: 'python',
+      type: 'application/vnd.ant.code',
+      content: 'print(1)',
+    });
+  });
+
+  it('returns undefined for diff-only updates (no content)', () => {
+    expect(artifactFromInput({ id: 'x', old_str: 'a', new_str: 'b' })).toBeUndefined();
+    expect(artifactFromInput({ content: '   ' })).toBeUndefined();
+    expect(artifactFromInput(null)).toBeUndefined();
+  });
+});
+
+describe('collectArtifacts', () => {
+  it('dedupes by id, keeping the latest version, then anon artifacts', () => {
+    const messages = [
+      {
+        uuid: 'a',
+        sender: 'assistant' as const,
+        content: [
+          {
+            type: 'tool_use',
+            name: 'artifacts',
+            input: { id: 'k', title: 'K', content: 'v1' },
+          },
+        ],
+      },
+      {
+        uuid: 'b',
+        sender: 'assistant' as const,
+        content: [
+          {
+            type: 'tool_use',
+            name: 'artifacts',
+            input: { id: 'k', title: 'K', content: 'v2' },
+          },
+          {
+            type: 'tool_use',
+            name: 'artifacts',
+            input: { title: 'Anon', content: 'anon-body' },
+          },
+        ],
+      },
+    ];
+    const arts = collectArtifacts(messages);
+    expect(arts).toHaveLength(2);
+    expect(arts[0].content).toBe('v2');
+    expect(arts[1].content).toBe('anon-body');
+  });
+
+  it('ignores non-artifact tool_use blocks', () => {
+    const messages = [
+      {
+        uuid: 'a',
+        sender: 'assistant' as const,
+        content: [
+          { type: 'tool_use', name: 'repl', input: { code: 'x' } },
+          { type: 'text', text: 'hi' },
+        ],
+      },
+    ];
+    expect(collectArtifacts(messages)).toHaveLength(0);
+  });
+
+  it('preserves authoring order; an updated artifact keeps its original slot', () => {
+    // create A(id=a), then anonymous X, then UPDATE A. A must stay first
+    // (its first-appearance slot), updated to its latest content; X stays
+    // second. (Regression test for the earlier "all id'd before all anon".)
+    const messages = [
+      {
+        uuid: 'm1',
+        sender: 'assistant' as const,
+        content: [
+          { type: 'tool_use', name: 'artifacts', input: { id: 'a', content: 'A-v1' } },
+        ],
+      },
+      {
+        uuid: 'm2',
+        sender: 'assistant' as const,
+        content: [
+          { type: 'tool_use', name: 'artifacts', input: { content: 'X-anon' } },
+        ],
+      },
+      {
+        uuid: 'm3',
+        sender: 'assistant' as const,
+        content: [
+          { type: 'tool_use', name: 'artifacts', input: { id: 'a', content: 'A-v2' } },
+        ],
+      },
+    ];
+    const arts = collectArtifacts(messages);
+    expect(arts.map((a) => a.content)).toEqual(['A-v2', 'X-anon']);
   });
 });

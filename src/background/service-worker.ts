@@ -4,10 +4,13 @@ import { appendToBuffer } from '@/shared/buffer-storage';
 import { buildEntryHeading } from '@/shared/file-appender';
 import { listRoutes } from '@/shared/handle-store';
 import { resolveRoute } from '@/shared/route-matcher';
+import { buildContextSlug, dedupePrefix } from '@/shared/slug';
+import { buildArtifactFiles } from '@/shared/artifact-file';
 import type {
   CapturedContext,
   OffscreenAppendResult,
   OffscreenClipboardResult,
+  OffscreenMcpStoreResult,
   OffscreenMessage,
   RuntimeMessage,
   UserOptions,
@@ -94,9 +97,18 @@ async function requestCapture(
   type: 'CAPTURE_PAGE' | 'CAPTURE_SELECTION'
 ): Promise<RuntimeMessage> {
   try {
+    const options = await loadOptions();
     const response = await chrome.tabs.sendMessage<RuntimeMessage, RuntimeMessage>(
       tabId,
-      { type }
+      {
+        type,
+        // Forward parser-relevant options so the content script (which can't
+        // read chrome.storage) can honor claude.ai capture preferences.
+        options: {
+          claudeAiArtifactsOnly: options.claudeAiArtifactsOnly,
+          claudeAiMaxMessages: options.claudeAiMaxMessages,
+        },
+      }
     );
 
     if (response.type === 'CAPTURE_ERROR') {
@@ -108,7 +120,6 @@ async function requestCapture(
       return { type: 'CAPTURE_ERROR', error: 'Unexpected response from content script.' };
     }
 
-    const options = await loadOptions();
     const finalMarkdown = renderFinalMarkdown(response.payload, options);
 
     await deliver(finalMarkdown, response.payload, options, tabId);
@@ -165,6 +176,46 @@ async function deliver(
   }
   if (options.defaultMode === 'claude-md') {
     await appendToClaudeMd(ctx, markdown);
+  }
+  if (options.defaultMode === 'mcp-store') {
+    await writeToMcpStore(ctx, markdown);
+  }
+}
+
+/**
+ * Write the capture as a standalone `<slug>.md` file into the linked MCP
+ * contexts directory (via the offscreen document's FSA access). The companion
+ * MCP server reads that directory to expose captures to Claude Code on demand.
+ */
+async function writeToMcpStore(
+  ctx: CapturedContext,
+  markdown: string
+): Promise<void> {
+  const baseSlug = buildContextSlug(ctx);
+
+  // The complete set for this capture: the main file, plus one file per
+  // code/document artifact (claude.ai) so `get_context` can return a single
+  // artifact's code directly — "one code = one file".
+  const files = [
+    { fileName: `${baseSlug}.md`, content: markdown },
+    ...buildArtifactFiles(ctx),
+  ];
+
+  // Write as a replace-set: when this capture has a stable identity
+  // (dedupeKey, e.g. a claude.ai conversation), any previous version is removed
+  // first by its stable prefix — so re-capturing UPDATES it instead of
+  // accumulating duplicate snapshots, even if the conversation title changed.
+  const cleanupPrefix = ctx.dedupeKey ? dedupePrefix(ctx.dedupeKey) : null;
+  const result = await sendToOffscreenWithRetry<OffscreenMcpStoreResult>({
+    target: 'offscreen',
+    type: 'WRITE_MCP_FILESET',
+    cleanupPrefix,
+    files,
+  });
+  if (!result?.ok) {
+    const reason = result?.reason ?? 'write-failed';
+    const detail = result?.message ?? 'Unknown error';
+    throw new Error(`${reason}: ${detail}`);
   }
 }
 

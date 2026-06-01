@@ -24,5 +24,7 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true,
+    // mcp-server is a separate Node package with its own vitest run.
+    exclude: ['node_modules', 'dist', 'mcp-server/**'],
   },
 });

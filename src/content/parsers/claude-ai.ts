@@ -1,4 +1,4 @@
-import type { CapturedContext } from '@/shared/types';
+import type { CaptureOptions, CapturedContext } from '@/shared/types';
 
 /**
  * claude.ai conversation parser.
@@ -28,7 +28,9 @@ export function canHandleClaudeAi(): boolean {
   );
 }
 
-export async function parseClaudeAi(): Promise<CapturedContext> {
+export async function parseClaudeAi(
+  options: CaptureOptions = {}
+): Promise<CapturedContext> {
   const url = window.location.href;
   const capturedAt = new Date().toISOString();
   const conversationUuid = extractConversationUuid(window.location.pathname);
@@ -46,8 +48,43 @@ export async function parseClaudeAi(): Promise<CapturedContext> {
   }
 
   const conversation = await fetchConversation(orgUuid, conversationUuid);
-  const messages = orderedMessages(conversation);
+  let messages = orderedMessages(conversation);
+
+  // Range selection: keep only the last N messages of the (chronological)
+  // thread, so long planning conversations don't dump their whole history.
+  const maxMessages = options.claudeAiMaxMessages ?? 0;
+  if (maxMessages > 0 && messages.length > maxMessages) {
+    messages = messages.slice(-maxMessages);
+  }
+
   const title = (conversation.name ?? '').trim() || 'Untitled Claude conversation';
+  const artifacts = collectArtifacts(messages);
+
+  // Artifacts-only: extract just the code/documents Claude authored, dropping
+  // the surrounding conversation entirely.
+  if (options.claudeAiArtifactsOnly) {
+    if (artifacts.length === 0) {
+      throw new Error(
+        'No artifacts found in this conversation. Turn off "artifacts only" to capture the full chat.'
+      );
+    }
+    return {
+      url,
+      title,
+      body: renderArtifactsMarkdown(title, artifacts),
+      capturedAt,
+      publishedAt: conversation.created_at,
+      parser: 'claude-ai',
+      fromSelection: false,
+      tags: tagsFor(conversation, artifacts),
+      artifacts,
+      // Stable per conversation+mode: re-capturing artifacts-only updates the
+      // same file rather than creating a new snapshot. A separate suffix keeps
+      // it distinct from a full capture of the same conversation.
+      dedupeKey: `${conversationUuid}:artifacts`,
+    };
+  }
+
   const body = renderConversationMarkdown(title, conversation, messages);
 
   return {
@@ -59,6 +96,12 @@ export async function parseClaudeAi(): Promise<CapturedContext> {
     parser: 'claude-ai',
     fromSelection: false,
     tags: tagsFor(conversation),
+    // Expose artifacts so mcp-store mode can split them into one file each,
+    // even when the body is the full conversation.
+    artifacts: artifacts.length > 0 ? artifacts : undefined,
+    // Stable per conversation: re-capturing the same chat overwrites the
+    // existing store file instead of accumulating duplicate snapshots.
+    dedupeKey: conversationUuid,
   };
 }
 
@@ -231,6 +274,13 @@ function renderContentBlock(block: ConversationMessageContent): string {
     }
     case 'tool_use': {
       const name = (block as { name?: string }).name ?? 'tool_use';
+      // The artifacts tool carries the code/documents Claude writes. Render it
+      // as a real fenced code block (with language + title) instead of raw
+      // JSON, so it's directly usable in CLAUDE.md / a project.
+      if (name === 'artifacts') {
+        const art = artifactFromInput((block as { input?: unknown }).input);
+        if (art) return renderArtifactBlock(art);
+      }
       const input = (block as { input?: unknown }).input;
       const inputStr = input ? '\n\n```json\n' + safeJson(input) + '\n```' : '';
       return `> **tool_use**: \`${name}\`${inputStr}`;
@@ -262,10 +312,120 @@ function safeJson(v: unknown): string {
   }
 }
 
-function tagsFor(conv: Conversation): string[] | undefined {
+function tagsFor(conv: Conversation, artifacts?: Artifact[]): string[] | undefined {
   const tags: string[] = [];
   if (conv.model) tags.push(`model:${conv.model}`);
+  if (artifacts && artifacts.length > 0) {
+    tags.push('artifacts-only');
+    const langs = new Set(
+      artifacts.map((a) => a.language).filter((l): l is string => !!l)
+    );
+    for (const lang of langs) tags.push(`lang:${lang}`);
+  }
   return tags.length > 0 ? tags : undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Artifacts
+// ---------------------------------------------------------------------------
+
+/** A code or document artifact Claude authored during the conversation. */
+export interface Artifact {
+  /** Stable artifact id (used to dedupe updates to the same artifact). */
+  id?: string;
+  /** Human title, e.g. "Auth middleware". */
+  title?: string;
+  /** Fence language hint, e.g. "ts", "python", "markdown". */
+  language?: string;
+  /** Artifact MIME-ish type, e.g. "application/vnd.ant.code", "text/markdown". */
+  type?: string;
+  /** The artifact body. */
+  content: string;
+}
+
+/**
+ * Parse the `input` of an `artifacts` tool_use block into an Artifact.
+ * claude.ai's artifact tool uses fields like:
+ *   { command: "create"|"update"|"rewrite", id, type, title, language, content }
+ * Updates may carry only a diff (old_str/new_str); those have no full content
+ * and are skipped (the create/rewrite that follows carries the full text).
+ */
+export function artifactFromInput(input: unknown): Artifact | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const o = input as Record<string, unknown>;
+  const content = typeof o.content === 'string' ? o.content : undefined;
+  if (!content || content.trim() === '') return undefined;
+  return {
+    id: typeof o.id === 'string' ? o.id : undefined,
+    title: typeof o.title === 'string' ? o.title : undefined,
+    language: typeof o.language === 'string' ? o.language : undefined,
+    type: typeof o.type === 'string' ? o.type : undefined,
+    content,
+  };
+}
+
+/**
+ * Collect all artifacts across the given messages, in order. When the same
+ * artifact id is created then updated/rewritten, the LATER (most complete)
+ * version wins — so we capture the final state, not every intermediate edit.
+ */
+export function collectArtifacts(messages: ConversationMessage[]): Artifact[] {
+  // Preserve authoring order. Each artifact occupies one slot at its FIRST
+  // appearance; a later update/rewrite of the same id replaces the content in
+  // that same slot (so the final version wins without jumping position).
+  const order: Array<{ id?: string; art: Artifact }> = [];
+  const indexById = new Map<string, number>();
+
+  for (const msg of messages) {
+    const blocks = Array.isArray(msg.content) ? msg.content : [];
+    for (const block of blocks) {
+      if (block.type !== 'tool_use') continue;
+      if ((block as { name?: string }).name !== 'artifacts') continue;
+      const art = artifactFromInput((block as { input?: unknown }).input);
+      if (!art) continue;
+      if (art.id !== undefined && indexById.has(art.id)) {
+        order[indexById.get(art.id)!].art = art; // update in place
+      } else {
+        if (art.id !== undefined) indexById.set(art.id, order.length);
+        order.push({ id: art.id, art });
+      }
+    }
+  }
+
+  return order.map((o) => o.art);
+}
+
+/** Render a single artifact as a titled, fenced code block. */
+function renderArtifactBlock(art: Artifact): string {
+  const lines: string[] = [];
+  if (art.title) lines.push(`#### ${art.title}`);
+  const fence = fenceLangFor(art);
+  lines.push('```' + fence);
+  lines.push(art.content.replace(/\n+$/, ''));
+  lines.push('```');
+  return lines.join('\n');
+}
+
+/** Render an artifacts-only capture: title + each artifact as a code block. */
+function renderArtifactsMarkdown(title: string, artifacts: Artifact[]): string {
+  const lines: string[] = [`# ${title} — artifacts`, ''];
+  artifacts.forEach((art, i) => {
+    lines.push(renderArtifactBlock(art));
+    if (i < artifacts.length - 1) lines.push('');
+  });
+  return lines.join('\n').trimEnd() + '\n';
+}
+
+/** Choose a fenced-code language label from the artifact's language/type. */
+function fenceLangFor(art: Artifact): string {
+  if (art.language) return art.language;
+  if (art.type) {
+    if (art.type.includes('markdown')) return 'markdown';
+    if (art.type.includes('html')) return 'html';
+    if (art.type.includes('svg')) return 'svg';
+    if (art.type.includes('mermaid')) return 'mermaid';
+  }
+  return '';
 }
 
 // ---------------------------------------------------------------------------
