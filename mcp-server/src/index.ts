@@ -29,6 +29,7 @@ import {
   resolveContextsDir,
   toSummary,
   describeStatus,
+  extractCode,
 } from './store.js';
 import { searchContexts } from './search.js';
 import { filterEntries, type FilterCriteria } from './filter.js';
@@ -138,23 +139,34 @@ server.registerTool(
   'get_context',
   {
     description:
-      'Fetch the full Markdown of one captured context by its slug (from ' +
-      'list_contexts or search_contexts). Returns the complete captured page ' +
-      'or claude.ai conversation, including frontmatter metadata. Matching is ' +
-      'fuzzy: an exact filename, a slug, or a unique substring all work.',
+      'Fetch one captured context by its slug (from list_contexts or ' +
+      'search_contexts). Matching is fuzzy: an exact filename, a slug, or a ' +
+      'unique substring all work. With format:"code" (useful for artifacts — ' +
+      'single code/document files), returns just the raw code with frontmatter ' +
+      'and code fences stripped, ready to write to a file.',
     inputSchema: {
       slug: z
         .string()
         .describe('The context slug, filename, or a unique substring of it.'),
+      format: z
+        .enum(['markdown', 'code'])
+        .optional()
+        .describe(
+          'markdown (default): full file with frontmatter. code: raw code only, ' +
+            'fences and frontmatter stripped — best for single artifacts.'
+        ),
     },
   },
-  async ({ slug }) => {
+  async ({ slug, format }) => {
     const entry = await store.readBySlug(slug);
     if (!entry) {
       return textResult(
         `No captured context matches "${slug}". Run list_contexts to see available slugs.`,
         true
       );
+    }
+    if (format === 'code') {
+      return textResult(extractCode(entry));
     }
     return textResult(entry.raw);
   }

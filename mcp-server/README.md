@@ -82,8 +82,23 @@ server can serve to Claude Code.
 | `list_contexts` | List captures (metadata only). Filter by `parser`, `tags` (AND/OR via `tagMatch`), `since`/`until` date range; `limit`. |
 | `search_contexts` | Ranked keyword search across title, URL, tags, and body, with snippets. Accepts the same `parser`/`tags`/`since`/`until` filters to scope the search first. |
 | `stats_contexts` | Aggregate overview: total count + size, breakdown by source, top tags, captured-at date range. |
-| `get_context` | Fetch one capture's full Markdown by `slug` (fuzzy matching). |
+| `get_context` | Fetch one capture by `slug` (fuzzy matching). `format:"code"` returns just the raw code (fences + frontmatter stripped) — ideal for single artifacts. |
 | `delete_context` | Remove a capture by `slug` once it's been incorporated. |
+
+### Artifacts as individual files
+
+When you capture a claude.ai conversation in **mcp-store** mode, each code or
+document **artifact** Claude wrote is also saved as its own file (`parser:
+claude-ai-artifact`, tagged `artifact` + `lang:<x>`). So you can:
+
+```
+list_contexts({ tags: ["artifact"], parser: "claude-ai-artifact" })
+get_context({ slug: "...--auth-middleware", format: "code" })   // → raw code, ready to write to a file
+```
+
+That's the "one code = one file" path: ask Claude Code to pull a specific
+artifact and it gets exactly that file's contents, with no conversation or
+Markdown wrapping.
 
 ### Filtering
 

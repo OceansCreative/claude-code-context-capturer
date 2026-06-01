@@ -58,11 +58,11 @@ export async function parseClaudeAi(
   }
 
   const title = (conversation.name ?? '').trim() || 'Untitled Claude conversation';
+  const artifacts = collectArtifacts(messages);
 
   // Artifacts-only: extract just the code/documents Claude authored, dropping
   // the surrounding conversation entirely.
   if (options.claudeAiArtifactsOnly) {
-    const artifacts = collectArtifacts(messages);
     if (artifacts.length === 0) {
       throw new Error(
         'No artifacts found in this conversation. Turn off "artifacts only" to capture the full chat.'
@@ -77,6 +77,7 @@ export async function parseClaudeAi(
       parser: 'claude-ai',
       fromSelection: false,
       tags: tagsFor(conversation, artifacts),
+      artifacts,
     };
   }
 
@@ -91,6 +92,9 @@ export async function parseClaudeAi(
     parser: 'claude-ai',
     fromSelection: false,
     tags: tagsFor(conversation),
+    // Expose artifacts so mcp-store mode can split them into one file each,
+    // even when the body is the full conversation.
+    artifacts: artifacts.length > 0 ? artifacts : undefined,
   };
 }
 

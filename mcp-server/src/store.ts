@@ -355,3 +355,19 @@ function firstHeading(body: string): string | undefined {
   const m = body.match(/^#{1,6}\s+(.+)$/m);
   return m?.[1]?.trim();
 }
+
+/**
+ * Extract raw code from an entry whose body is a single fenced code block
+ * (the shape `buildArtifactFiles` writes). Returns the code with the fence and
+ * frontmatter stripped. If the body isn't a single clean code block, returns
+ * the trimmed body unchanged so callers always get something usable.
+ */
+export function extractCode(entry: ContextEntry): string {
+  const body = entry.body.trim();
+  // Match a leading ```lang ... ``` block, optionally preceded by a heading.
+  const fence = body.match(/```[^\n]*\n([\s\S]*?)\n?```/);
+  if (fence) {
+    return fence[1].replace(/\n+$/, '') + '\n';
+  }
+  return body + '\n';
+}

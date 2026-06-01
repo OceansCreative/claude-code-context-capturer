@@ -5,6 +5,7 @@ import { buildEntryHeading } from '@/shared/file-appender';
 import { listRoutes } from '@/shared/handle-store';
 import { resolveRoute } from '@/shared/route-matcher';
 import { buildContextSlug } from '@/shared/slug';
+import { buildArtifactFiles } from '@/shared/artifact-file';
 import type {
   CapturedContext,
   OffscreenAppendResult,
@@ -191,11 +192,23 @@ async function writeToMcpStore(
   markdown: string
 ): Promise<void> {
   const fileName = `${buildContextSlug(ctx)}.md`;
+  await writeOneMcpFile(fileName, markdown);
+
+  // If the capture carried code/document artifacts (claude.ai), also write one
+  // standalone file per artifact so `get_context` can return a single
+  // artifact's code directly — "one code = one file".
+  const artifactFiles = buildArtifactFiles(ctx);
+  for (const file of artifactFiles) {
+    await writeOneMcpFile(file.fileName, file.content);
+  }
+}
+
+async function writeOneMcpFile(fileName: string, content: string): Promise<void> {
   const result = await sendToOffscreenWithRetry<OffscreenMcpStoreResult>({
     target: 'offscreen',
     type: 'WRITE_TO_MCP_STORE',
     fileName,
-    content: markdown,
+    content,
   });
   if (!result?.ok) {
     const reason = result?.reason ?? 'write-failed';

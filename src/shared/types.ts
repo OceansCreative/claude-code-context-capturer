@@ -22,6 +22,31 @@ export interface CapturedContext {
   parser: ParserName;
   /** True if this came from a user text selection (not the whole page). */
   fromSelection: boolean;
+  /**
+   * Code/document artifacts detected in this capture (currently claude.ai
+   * only). In `mcp-store` output mode these are written as one file each, so
+   * `get_context` can return a single artifact's code directly. Other output
+   * modes ignore this (the artifacts are already rendered inside `body`).
+   */
+  artifacts?: CapturedArtifact[];
+  /**
+   * When this context IS a single extracted artifact (one file per artifact),
+   * the slug of the parent capture it came from. Surfaced in frontmatter as
+   * `artifact_of` so the conversation it belongs to is discoverable.
+   */
+  artifactOf?: string;
+}
+
+/** A single code or document artifact extracted from a capture. */
+export interface CapturedArtifact {
+  /** Stable artifact id from the source, when available. */
+  id?: string;
+  /** Human title, e.g. "Auth middleware". */
+  title?: string;
+  /** Fence language hint, e.g. "ts", "python", "markdown". */
+  language?: string;
+  /** The artifact body (raw code/document text). */
+  content: string;
 }
 
 /** Names of all built-in parsers. */

@@ -7,6 +7,7 @@ import {
   splitFrontmatter,
   parseTags,
   describeStatus,
+  extractCode,
   ContextStore,
 } from '../src/store.js';
 import { searchContexts } from '../src/search.js';
@@ -138,6 +139,37 @@ describe('ContextStore.status + describeStatus', () => {
     const status = await store.status();
     expect(status).toEqual({ kind: 'ok', fileCount: 2 });
     expect(describeStatus(store.dir, status)).toContain('2 capture');
+  });
+});
+
+describe('extractCode', () => {
+  const ARTIFACT = `---
+title: Auth middleware
+parser: claude-ai-artifact
+language: ts
+tags: ["artifact", "lang:ts"]
+---
+
+\`\`\`ts
+export const auth = () => {
+  return true;
+};
+\`\`\`
+`;
+
+  it('returns raw code with frontmatter and fences stripped', () => {
+    const entry = parseContextFile('x', '/x/x.md', ARTIFACT, ARTIFACT.length);
+    const code = extractCode(entry);
+    expect(code).toBe('export const auth = () => {\n  return true;\n};\n');
+    expect(code).not.toContain('```');
+    expect(code).not.toContain('parser:');
+  });
+
+  it('falls back to the trimmed body when there is no code fence', () => {
+    const plain = '# Heading\n\njust prose, no fence';
+    const entry = parseContextFile('y', '/y/y.md', plain, plain.length);
+    const code = extractCode(entry);
+    expect(code).toContain('just prose, no fence');
   });
 });
 
