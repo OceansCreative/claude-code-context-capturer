@@ -96,9 +96,18 @@ async function requestCapture(
   type: 'CAPTURE_PAGE' | 'CAPTURE_SELECTION'
 ): Promise<RuntimeMessage> {
   try {
+    const options = await loadOptions();
     const response = await chrome.tabs.sendMessage<RuntimeMessage, RuntimeMessage>(
       tabId,
-      { type }
+      {
+        type,
+        // Forward parser-relevant options so the content script (which can't
+        // read chrome.storage) can honor claude.ai capture preferences.
+        options: {
+          claudeAiArtifactsOnly: options.claudeAiArtifactsOnly,
+          claudeAiMaxMessages: options.claudeAiMaxMessages,
+        },
+      }
     );
 
     if (response.type === 'CAPTURE_ERROR') {
@@ -110,7 +119,6 @@ async function requestCapture(
       return { type: 'CAPTURE_ERROR', error: 'Unexpected response from content script.' };
     }
 
-    const options = await loadOptions();
     const finalMarkdown = renderFinalMarkdown(response.payload, options);
 
     await deliver(finalMarkdown, response.payload, options, tabId);

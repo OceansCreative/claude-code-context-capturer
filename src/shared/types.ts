@@ -49,6 +49,28 @@ export interface UserOptions {
   defaultMode: OutputMode;
   /** Locale for date formatting and built-in messages. */
   locale: 'en' | 'ja';
+  /**
+   * claude.ai capture: extract only artifacts (code/documents Claude wrote),
+   * dropping the surrounding conversation. Ideal for pulling "the code from
+   * that chat" into a project without the brainstorming noise.
+   */
+  claudeAiArtifactsOnly: boolean;
+  /**
+   * claude.ai capture: keep only the last N messages of the conversation
+   * (0 = the whole thing). Trims long planning threads down to the part that
+   * matters before it lands in your context.
+   */
+  claudeAiMaxMessages: number;
+}
+
+/**
+ * Capture-time options forwarded from the service worker to the content-script
+ * parsers. A small, parser-relevant subset of UserOptions — the parser runs in
+ * the page and shouldn't reach into chrome.storage itself.
+ */
+export interface CaptureOptions {
+  claudeAiArtifactsOnly?: boolean;
+  claudeAiMaxMessages?: number;
 }
 
 /** Where the captured Markdown should go. */
@@ -75,12 +97,14 @@ export const DEFAULT_OPTIONS: UserOptions = {
   maxBodyLength: 0,
   defaultMode: 'clipboard',
   locale: 'en',
+  claudeAiArtifactsOnly: false,
+  claudeAiMaxMessages: 0,
 };
 
 /** Messages exchanged between background and content scripts. */
 export type RuntimeMessage =
-  | { type: 'CAPTURE_PAGE' }
-  | { type: 'CAPTURE_SELECTION' }
+  | { type: 'CAPTURE_PAGE'; options?: CaptureOptions }
+  | { type: 'CAPTURE_SELECTION'; options?: CaptureOptions }
   | { type: 'CAPTURE_RESULT'; payload: CapturedContext }
   | { type: 'CAPTURE_ERROR'; error: string };
 

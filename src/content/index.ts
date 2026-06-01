@@ -15,7 +15,7 @@ chrome.runtime.onMessage.addListener(
     if (message.type === 'CAPTURE_PAGE') {
       void (async () => {
         try {
-          const ctx: CapturedContext = await dispatchPageParser();
+          const ctx: CapturedContext = await dispatchPageParser(message.options);
           sendResponse({ type: 'CAPTURE_RESULT', payload: ctx });
         } catch (err) {
           const errMsg = err instanceof Error ? err.message : String(err);

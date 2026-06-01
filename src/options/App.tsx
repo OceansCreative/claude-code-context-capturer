@@ -308,6 +308,37 @@ export default function App() {
           </select>
         </Field>
 
+        <div className="mt-6 border-t border-slate-100 pt-5">
+          <h3 className="mb-1 text-sm font-semibold text-slate-700">
+            claude.ai conversations
+          </h3>
+          <p className="mb-3 text-xs text-slate-500">
+            Controls applied when capturing a claude.ai chat.
+          </p>
+
+          <Toggle
+            label="Artifacts only"
+            description="Capture just the code/documents Claude wrote (as clean code blocks), dropping the surrounding conversation."
+            checked={options.claudeAiArtifactsOnly}
+            onChange={(v) => setOptions({ ...options, claudeAiArtifactsOnly: v })}
+          />
+
+          <Field label="Keep only the last N messages (0 = whole conversation)">
+            <input
+              type="number"
+              min={0}
+              value={options.claudeAiMaxMessages}
+              onChange={(e) =>
+                setOptions({
+                  ...options,
+                  claudeAiMaxMessages: Math.max(0, Number(e.target.value)),
+                })
+              }
+              className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            />
+          </Field>
+        </div>
+
         <div className="mt-6 flex items-center gap-3">
           <button
             type="button"
