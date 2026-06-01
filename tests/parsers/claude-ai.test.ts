@@ -432,4 +432,35 @@ describe('collectArtifacts', () => {
     ];
     expect(collectArtifacts(messages)).toHaveLength(0);
   });
+
+  it('preserves authoring order; an updated artifact keeps its original slot', () => {
+    // create A(id=a), then anonymous X, then UPDATE A. A must stay first
+    // (its first-appearance slot), updated to its latest content; X stays
+    // second. (Regression test for the earlier "all id'd before all anon".)
+    const messages = [
+      {
+        uuid: 'm1',
+        sender: 'assistant' as const,
+        content: [
+          { type: 'tool_use', name: 'artifacts', input: { id: 'a', content: 'A-v1' } },
+        ],
+      },
+      {
+        uuid: 'm2',
+        sender: 'assistant' as const,
+        content: [
+          { type: 'tool_use', name: 'artifacts', input: { content: 'X-anon' } },
+        ],
+      },
+      {
+        uuid: 'm3',
+        sender: 'assistant' as const,
+        content: [
+          { type: 'tool_use', name: 'artifacts', input: { id: 'a', content: 'A-v2' } },
+        ],
+      },
+    ];
+    const arts = collectArtifacts(messages);
+    expect(arts.map((a) => a.content)).toEqual(['A-v2', 'X-anon']);
+  });
 });

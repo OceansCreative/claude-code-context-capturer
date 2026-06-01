@@ -8,6 +8,7 @@ import {
   parseTags,
   describeStatus,
   extractCode,
+  isSafeSlugComponent,
   ContextStore,
 } from '../src/store.js';
 import { searchContexts } from '../src/search.js';
@@ -142,6 +143,72 @@ describe('ContextStore.status + describeStatus', () => {
   });
 });
 
+describe('isSafeSlugComponent (path-traversal guard)', () => {
+  it('accepts normal slugs', () => {
+    expect(isSafeSlugComponent('ccc-1a2b3c-auth')).toBe(true);
+    expect(isSafeSlugComponent('2026-05-31-react-hooks-abc123')).toBe(true);
+  });
+
+  it('rejects traversal, separators, absolute paths, and specials', () => {
+    expect(isSafeSlugComponent('../etc/passwd')).toBe(false);
+    expect(isSafeSlugComponent('..')).toBe(false);
+    expect(isSafeSlugComponent('.')).toBe(false);
+    expect(isSafeSlugComponent('a/b')).toBe(false);
+    expect(isSafeSlugComponent('a\\b')).toBe(false);
+    expect(isSafeSlugComponent('/etc/passwd')).toBe(false);
+    expect(isSafeSlugComponent('foo/../bar')).toBe(false);
+    expect(isSafeSlugComponent('a\0b')).toBe(false);
+    expect(isSafeSlugComponent('')).toBe(false);
+  });
+});
+
+describe('ContextStore path containment', () => {
+  let tmp: string;
+  let secretPath: string;
+
+  beforeAll(async () => {
+    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'ccc-sec-'));
+    await fs.mkdir(path.join(tmp, 'contexts'));
+    secretPath = path.join(tmp, 'secret.md');
+    await fs.writeFile(secretPath, '# TOP SECRET');
+    await fs.writeFile(path.join(tmp, 'contexts', 'real.md'), '# real');
+  });
+
+  afterAll(async () => {
+    await fs.rm(tmp, { recursive: true, force: true });
+  });
+
+  it('does not read files outside the contexts dir via traversal', async () => {
+    const store = new ContextStore(path.join(tmp, 'contexts'));
+    const entry = await store.readBySlug('../secret');
+    expect(entry).toBeUndefined();
+  });
+
+  it('does not delete files outside the contexts dir via traversal', async () => {
+    const store = new ContextStore(path.join(tmp, 'contexts'));
+    const deleted = await store.deleteBySlug('../secret');
+    expect(deleted).toBe(false);
+    // The secret file must still exist.
+    await expect(fs.stat(secretPath)).resolves.toBeDefined();
+  });
+
+  it('still reads a legitimate file inside the dir', async () => {
+    const store = new ContextStore(path.join(tmp, 'contexts'));
+    const entry = await store.readBySlug('real');
+    expect(entry?.slug).toBe('real');
+  });
+});
+
+describe('splitFrontmatter CRLF handling', () => {
+  it('parses frontmatter with Windows line endings', () => {
+    const crlf = '---\r\ntitle: Hello\r\nparser: github\r\n---\r\n\r\n# Body\r\n';
+    const { frontmatter, body } = splitFrontmatter(crlf);
+    expect(frontmatter.title).toBe('Hello');
+    expect(frontmatter.parser).toBe('github');
+    expect(body).toContain('# Body');
+  });
+});
+
 describe('extractCode', () => {
   const ARTIFACT = `---
 title: Auth middleware
@@ -170,6 +237,23 @@ export const auth = () => {
     const entry = parseContextFile('y', '/y/y.md', plain, plain.length);
     const code = extractCode(entry);
     expect(code).toContain('just prose, no fence');
+  });
+
+  it('does NOT truncate when there is prose after the fence', () => {
+    const mixed = '```ts\nconst x = 1;\n```\n\nTrailing prose must not be lost.';
+    const entry = parseContextFile('z', '/z/z.md', mixed, mixed.length);
+    const code = extractCode(entry);
+    // Full body preserved (no silent loss), not just the first fence.
+    expect(code).toContain('Trailing prose must not be lost.');
+    expect(code).toContain('const x = 1;');
+  });
+
+  it('does NOT truncate when there are multiple code fences', () => {
+    const two = '```ts\na();\n```\n\n```ts\nb();\n```';
+    const entry = parseContextFile('w', '/w/w.md', two, two.length);
+    const code = extractCode(entry);
+    expect(code).toContain('a();');
+    expect(code).toContain('b();');
   });
 });
 

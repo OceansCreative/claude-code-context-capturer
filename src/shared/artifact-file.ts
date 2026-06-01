@@ -1,5 +1,5 @@
 import type { CapturedArtifact, CapturedContext } from './types';
-import { buildContextSlug, shortHash } from './slug';
+import { buildContextSlug } from './slug';
 
 /** One artifact rendered as a standalone store file (name + contents). */
 export interface ArtifactFile {
@@ -37,12 +37,18 @@ function uniqueArtifactFileName(
 ): string {
   const titlePart = slugifyTitle(art.title) || `artifact-${index + 1}`;
   // Keep artifact files grouped next to (but distinct from) the parent slug.
-  let base = `${parentSlug}--${titlePart}`;
-  if (used.has(base)) {
-    base = `${base}-${shortHash(art.id ?? art.content).slice(0, 4)}`;
+  const base = `${parentSlug}--${titlePart}`;
+  // Guarantee uniqueness: if the base (or a numbered variant) is taken, keep
+  // incrementing. A plain counter is collision-proof, unlike a hash suffix
+  // that could itself collide and silently overwrite another artifact's file.
+  let candidate = base;
+  let n = 2;
+  while (used.has(candidate)) {
+    candidate = `${base}-${n}`;
+    n++;
   }
-  used.add(base);
-  return `${base}.md`;
+  used.add(candidate);
+  return `${candidate}.md`;
 }
 
 function renderArtifactFile(

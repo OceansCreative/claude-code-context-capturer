@@ -79,6 +79,20 @@ export function toSummary(entry: ContextEntry): ContextSummary {
 const MARKDOWN_EXTENSIONS = new Set(['.md', '.markdown']);
 
 /**
+ * True if `slug` is safe to use as a direct filename component: no path
+ * separators, no parent-dir traversal, not absolute. Untrusted slugs (e.g.
+ * derived from a captured page's title) must pass this before any fs access.
+ */
+export function isSafeSlugComponent(slug: string): boolean {
+  if (!slug || slug === '.' || slug === '..') return false;
+  if (/[/\\]/.test(slug)) return false; // no separators
+  if (slug.includes('..')) return false; // no traversal
+  if (path.isAbsolute(slug)) return false; // no absolute paths
+  if (slug.includes('\0')) return false; // no NUL
+  return true;
+}
+
+/**
  * Resolve the contexts directory from (in priority order):
  *   1. an explicit argument
  *   2. the CCC_CONTEXTS_DIR environment variable
@@ -175,17 +189,27 @@ export class ContextStore {
 
   /** Read a single file by its name (with or without extension) or slug. */
   async readBySlug(slug: string): Promise<ContextEntry | undefined> {
-    const candidates = [slug, `${slug}.md`, `${slug}.markdown`];
-    for (const name of candidates) {
-      try {
-        const stat = await fs.stat(path.join(this.dir, name));
-        if (stat.isFile()) return this.readOne(name);
-      } catch {
-        // try next candidate
+    // Security: a slug must name a file DIRECTLY inside the contexts dir. We
+    // reject anything with path separators or traversal up front, then verify
+    // the resolved path is still contained — so `../../etc/passwd`, absolute
+    // paths, and the like can never read outside the store.
+    if (isSafeSlugComponent(slug)) {
+      const candidates = [slug, `${slug}.md`, `${slug}.markdown`];
+      for (const name of candidates) {
+        const full = this.resolveInside(name);
+        if (!full) continue;
+        try {
+          const stat = await fs.stat(full);
+          if (stat.isFile()) return this.readOne(name);
+        } catch {
+          // try next candidate
+        }
       }
     }
 
-    // Fuzzy fallback: case-insensitive slug match across the directory.
+    // Fuzzy fallback: case-insensitive slug match across the directory. This is
+    // inherently safe — it only matches entries that readAll() found inside the
+    // dir — so it also serves slugs we rejected above as direct lookups.
     const all = await this.readAll();
     const lower = slug.toLowerCase();
     return (
@@ -194,10 +218,24 @@ export class ContextStore {
     );
   }
 
+  /**
+   * Resolve `name` against the contexts dir, returning the absolute path only
+   * if it stays strictly inside the dir. Returns undefined for any escape.
+   */
+  private resolveInside(name: string): string | undefined {
+    const base = path.resolve(this.dir);
+    const full = path.resolve(base, name);
+    if (full !== base && !full.startsWith(base + path.sep)) return undefined;
+    return full;
+  }
+
   /** Delete a capture by slug. Returns true if a file was removed. */
   async deleteBySlug(slug: string): Promise<boolean> {
     const entry = await this.readBySlug(slug);
     if (!entry) return false;
+    // Defense in depth: never unlink anything outside the contexts dir, even if
+    // a future code path produced an entry with an out-of-dir filePath.
+    if (!this.resolveInside(path.basename(entry.filePath))) return false;
     await fs.rm(entry.filePath);
     return true;
   }
@@ -292,7 +330,12 @@ export function splitFrontmatter(raw: string): {
   frontmatter: RawFrontmatter;
   body: string;
 } {
-  const normalized = raw.replace(/^\uFEFF/, ''); // strip BOM
+  // Strip BOM and normalize CRLF/CR \u2192 LF so Windows-authored files parse the
+  // same as Unix ones (otherwise trailing \r breaks every key: value match).
+  const normalized = raw
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
   if (!normalized.startsWith('---')) {
     return { frontmatter: {}, body: normalized };
   }
@@ -358,16 +401,24 @@ function firstHeading(body: string): string | undefined {
 
 /**
  * Extract raw code from an entry whose body is a single fenced code block
- * (the shape `buildArtifactFiles` writes). Returns the code with the fence and
- * frontmatter stripped. If the body isn't a single clean code block, returns
- * the trimmed body unchanged so callers always get something usable.
+ * (the shape `buildArtifactFiles` writes). Returns the code with the fence
+ * stripped, but ONLY when the body is exactly one fenced block — so we never
+ * silently discard prose around it or a second code block. Anything else
+ * returns the trimmed body unchanged (the documented fallback), so callers
+ * always get the complete content rather than a truncated slice.
  */
 export function extractCode(entry: ContextEntry): string {
   const body = entry.body.trim();
-  // Match a leading ```lang ... ``` block, optionally preceded by a heading.
-  const fence = body.match(/```[^\n]*\n([\s\S]*?)\n?```/);
-  if (fence) {
-    return fence[1].replace(/\n+$/, '') + '\n';
+  // The whole body must be a single fence: opens with ```lang on line 1 and
+  // closes with ``` on the last line, with no other ``` fence in between.
+  const m = body.match(/^```[^\n]*\n([\s\S]*?)\n?```$/);
+  if (m) {
+    const inner = m[1];
+    // Reject if the captured inner content itself contains a fence boundary
+    // (i.e. there were actually multiple fences) — fall back to the full body.
+    if (!/^```/m.test(inner)) {
+      return inner.replace(/\n+$/, '') + '\n';
+    }
   }
   return body + '\n';
 }

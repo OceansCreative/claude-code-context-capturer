@@ -370,8 +370,11 @@ export function artifactFromInput(input: unknown): Artifact | undefined {
  * version wins — so we capture the final state, not every intermediate edit.
  */
 export function collectArtifacts(messages: ConversationMessage[]): Artifact[] {
-  const byId = new Map<string, Artifact>();
-  const anon: Artifact[] = [];
+  // Preserve authoring order. Each artifact occupies one slot at its FIRST
+  // appearance; a later update/rewrite of the same id replaces the content in
+  // that same slot (so the final version wins without jumping position).
+  const order: Array<{ id?: string; art: Artifact }> = [];
+  const indexById = new Map<string, number>();
 
   for (const msg of messages) {
     const blocks = Array.isArray(msg.content) ? msg.content : [];
@@ -380,15 +383,16 @@ export function collectArtifacts(messages: ConversationMessage[]): Artifact[] {
       if ((block as { name?: string }).name !== 'artifacts') continue;
       const art = artifactFromInput((block as { input?: unknown }).input);
       if (!art) continue;
-      if (art.id) {
-        byId.set(art.id, art); // later create/rewrite replaces earlier
+      if (art.id !== undefined && indexById.has(art.id)) {
+        order[indexById.get(art.id)!].art = art; // update in place
       } else {
-        anon.push(art);
+        if (art.id !== undefined) indexById.set(art.id, order.length);
+        order.push({ id: art.id, art });
       }
     }
   }
 
-  return [...byId.values(), ...anon];
+  return order.map((o) => o.art);
 }
 
 /** Render a single artifact as a titled, fenced code block. */

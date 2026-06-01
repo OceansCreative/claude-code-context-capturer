@@ -55,12 +55,21 @@ function truncate(s: string, max: number): string {
   return s.length <= max ? s : s.slice(0, max).replace(/-+$/g, '');
 }
 
-/** Small deterministic hash (djb2) rendered as base36, 6 chars. */
+/**
+ * Small deterministic hash (djb2) rendered as base36.
+ *
+ * Returns the FULL 32-bit value in base36 (6–7 chars), padded to a minimum of
+ * 6. We deliberately do NOT truncate: a `.slice(0, 6)` would discard a digit
+ * for ~half the 32-bit range, both shrinking the space and skewing it — and
+ * since this hash gates which files a re-capture deletes, a collision means
+ * deleting an unrelated capture's files. Keeping the full value preserves the
+ * entire 2^32 space.
+ */
 export function shortHash(input: string): string {
   let h = 5381;
   for (let i = 0; i < input.length; i++) {
     h = (h * 33) ^ input.charCodeAt(i);
   }
   // >>> 0 coerces to unsigned 32-bit before base36.
-  return (h >>> 0).toString(36).padStart(6, '0').slice(0, 6);
+  return (h >>> 0).toString(36).padStart(6, '0');
 }

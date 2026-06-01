@@ -30,6 +30,7 @@ import {
   toSummary,
   describeStatus,
   extractCode,
+  isSafeSlugComponent,
 } from './store.js';
 import { searchContexts } from './search.js';
 import { filterEntries, type FilterCriteria } from './filter.js';
@@ -291,6 +292,16 @@ server.registerTool(
     },
   },
   async ({ slug }) => {
+    // Defense in depth at the destructive boundary: reject path-like slugs
+    // outright (store.deleteBySlug also contains the path, but a clear refusal
+    // here is safer and more legible than a silent "nothing deleted").
+    if (!isSafeSlugComponent(slug)) {
+      return textResult(
+        `Refusing to delete: "${slug}" is not a valid context slug ` +
+          `(no paths or "..").`,
+        true
+      );
+    }
     const deleted = await store.deleteBySlug(slug);
     if (!deleted) {
       return textResult(
