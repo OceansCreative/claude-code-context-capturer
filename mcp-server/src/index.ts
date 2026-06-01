@@ -14,9 +14,10 @@
  * tools — so installation is just `npx` + one line in the MCP config.
  *
  * Tools:
- *   - list_contexts    : list captured contexts (metadata only)
+ *   - list_contexts    : list captured contexts (metadata only), filterable
  *   - get_context      : fetch one capture's full Markdown by slug
- *   - search_contexts  : ranked substring search across captures
+ *   - search_contexts  : ranked substring search across captures, filterable
+ *   - stats_contexts   : aggregate stats (counts by source/tag, date range)
  *   - delete_context   : remove a capture by slug
  */
 
@@ -30,6 +31,8 @@ import {
   describeStatus,
 } from './store.js';
 import { searchContexts } from './search.js';
+import { filterEntries, type FilterCriteria } from './filter.js';
+import { computeStats, formatBytes } from './stats.js';
 
 const VERSION = '0.1.0';
 
@@ -40,6 +43,49 @@ const server = new McpServer({
   name: 'claude-code-context-capturer',
   version: VERSION,
 });
+
+// Reusable filter fields shared by list_contexts and search_contexts.
+const FILTER_FIELDS = {
+  parser: z
+    .string()
+    .optional()
+    .describe('Filter by capture source, e.g. "claude-ai", "github", "generic".'),
+  tags: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Filter by tags (case-insensitive, substring). e.g. ["lang:ts"] or ' +
+        '["artifacts-only"]. By default an entry must match ALL given tags.'
+    ),
+  tagMatch: z
+    .enum(['all', 'any'])
+    .optional()
+    .describe('Whether entries must match ALL tags (default) or ANY of them.'),
+  since: z
+    .string()
+    .optional()
+    .describe('Only captures on/after this ISO date or datetime, e.g. "2026-05-01".'),
+  until: z
+    .string()
+    .optional()
+    .describe('Only captures on/before this ISO date or datetime (date = whole day).'),
+};
+
+function criteriaFrom(args: {
+  parser?: string;
+  tags?: string[];
+  tagMatch?: 'all' | 'any';
+  since?: string;
+  until?: string;
+}): FilterCriteria {
+  return {
+    parser: args.parser,
+    tags: args.tags,
+    tagMatch: args.tagMatch,
+    since: args.since,
+    until: args.until,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // list_contexts
@@ -52,15 +98,11 @@ server.registerTool(
       'List web pages and claude.ai conversations captured into this project ' +
       'by the Claude Code Context Capturer browser extension. Returns metadata ' +
       'only (slug, title, url, source, captured_at, tags) — call get_context ' +
-      'with a slug to read the full content. Use this to discover what research ' +
-      'or planning context is available before answering.',
+      'with a slug to read the full content. Filter by source, tags, and date ' +
+      'range. Use this to discover what research or planning context is ' +
+      'available before answering.',
     inputSchema: {
-      parser: z
-        .string()
-        .optional()
-        .describe(
-          'Optional filter by capture source, e.g. "claude-ai", "github", "generic".'
-        ),
+      ...FILTER_FIELDS,
       limit: z
         .number()
         .int()
@@ -70,22 +112,21 @@ server.registerTool(
         .describe('Maximum number of entries to return (default 50).'),
     },
   },
-  async ({ parser, limit }) => {
+  async ({ parser, tags, tagMatch, since, until, limit }) => {
     const all = await store.readAll();
-    let filtered = all;
-    if (parser) {
-      const p = parser.toLowerCase();
-      filtered = all.filter((e) => (e.parser ?? '').toLowerCase() === p);
-    }
-    const summaries = filtered.slice(0, limit ?? 50).map(toSummary);
+    const { entries, warnings } = filterEntries(
+      all,
+      criteriaFrom({ parser, tags, tagMatch, since, until })
+    );
+    const summaries = entries.slice(0, limit ?? 50).map(toSummary);
 
     if (summaries.length === 0) {
-      return textResult(await emptyMessage(parser));
+      return textResult(prependWarnings(warnings, await emptyMessage(parser)));
     }
 
     const header = `${summaries.length} captured context(s) in ${contextsDir}:\n`;
     const lines = summaries.map(formatSummaryLine);
-    return textResult(header + '\n' + lines.join('\n'));
+    return textResult(prependWarnings(warnings, header + '\n' + lines.join('\n')));
   }
 );
 
@@ -129,13 +170,15 @@ server.registerTool(
     description:
       'Search captured contexts by keyword(s), ranked by relevance. Matches ' +
       'titles, URLs, tags, and body text, and returns short snippets around ' +
-      'each match plus the slug to fetch with get_context. Prefer this over ' +
+      'each match plus the slug to fetch with get_context. Optionally restrict ' +
+      'the search to a source, tags, or date range first. Prefer this over ' +
       'reading every context when you are looking for something specific.',
     inputSchema: {
       query: z
         .string()
         .min(1)
         .describe('One or more space-separated keywords to search for.'),
+      ...FILTER_FIELDS,
       limit: z
         .number()
         .int()
@@ -145,11 +188,17 @@ server.registerTool(
         .describe('Maximum number of hits to return (default 10).'),
     },
   },
-  async ({ query, limit }) => {
+  async ({ query, parser, tags, tagMatch, since, until, limit }) => {
     const all = await store.readAll();
-    const hits = searchContexts(all, query, limit ?? 10);
+    const { entries, warnings } = filterEntries(
+      all,
+      criteriaFrom({ parser, tags, tagMatch, since, until })
+    );
+    const hits = searchContexts(entries, query, limit ?? 10);
     if (hits.length === 0) {
-      return textResult(`No captured contexts match "${query}".`);
+      return textResult(
+        prependWarnings(warnings, `No captured contexts match "${query}".`)
+      );
     }
     const blocks = hits.map((h) => {
       const meta = [
@@ -165,8 +214,52 @@ server.registerTool(
       return meta;
     });
     return textResult(
-      `${hits.length} match(es) for "${query}":\n\n` + blocks.join('\n\n')
+      prependWarnings(
+        warnings,
+        `${hits.length} match(es) for "${query}":\n\n` + blocks.join('\n\n')
+      )
     );
+  }
+);
+
+// ---------------------------------------------------------------------------
+// stats_contexts
+// ---------------------------------------------------------------------------
+
+server.registerTool(
+  'stats_contexts',
+  {
+    description:
+      'Summarize the capture store: total count and size, a breakdown by ' +
+      'source (claude-ai / github / generic / …), the most common tags, and ' +
+      'the captured-at date range. Use this for an at-a-glance picture of what ' +
+      'research/planning context exists without listing every entry.',
+    inputSchema: {},
+  },
+  async () => {
+    const all = await store.readAll();
+    if (all.length === 0) {
+      return textResult(await emptyMessage());
+    }
+    const stats = computeStats(all);
+    const lines: string[] = [];
+    lines.push(`**${stats.total}** captured context(s), ${formatBytes(stats.totalBytes)} total.`);
+    if (stats.earliest && stats.latest) {
+      lines.push(`Date range: ${stats.earliest} → ${stats.latest}`);
+    }
+    lines.push('');
+    lines.push('By source:');
+    for (const { source, count } of stats.bySource) {
+      lines.push(`- ${source}: ${count}`);
+    }
+    if (stats.topTags.length > 0) {
+      lines.push('');
+      lines.push('Top tags:');
+      for (const { tag, count } of stats.topTags) {
+        lines.push(`- ${tag}: ${count}`);
+      }
+    }
+    return textResult(lines.join('\n'));
   }
 );
 
@@ -206,6 +299,12 @@ function textResult(text: string, isError = false) {
     content: [{ type: 'text' as const, text }],
     isError,
   };
+}
+
+/** Prefix any non-fatal filter warnings (e.g. a bad date bound) to the output. */
+function prependWarnings(warnings: string[], text: string): string {
+  if (warnings.length === 0) return text;
+  return warnings.map((w) => `⚠️ ${w}`).join('\n') + '\n\n' + text;
 }
 
 function formatSummaryLine(s: ReturnType<typeof toSummary>): string {

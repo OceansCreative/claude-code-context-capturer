@@ -79,10 +79,27 @@ server can serve to Claude Code.
 
 | Tool | Description |
 |------|-------------|
-| `list_contexts` | List captures (metadata only). Optional `parser` filter, `limit`. |
-| `search_contexts` | Ranked keyword search across title, URL, tags, and body, with snippets. |
+| `list_contexts` | List captures (metadata only). Filter by `parser`, `tags` (AND/OR via `tagMatch`), `since`/`until` date range; `limit`. |
+| `search_contexts` | Ranked keyword search across title, URL, tags, and body, with snippets. Accepts the same `parser`/`tags`/`since`/`until` filters to scope the search first. |
+| `stats_contexts` | Aggregate overview: total count + size, breakdown by source, top tags, captured-at date range. |
 | `get_context` | Fetch one capture's full Markdown by `slug` (fuzzy matching). |
 | `delete_context` | Remove a capture by `slug` once it's been incorporated. |
+
+### Filtering
+
+`list_contexts` and `search_contexts` share these optional filters:
+
+- `parser` — exact source, e.g. `"claude-ai"`, `"github"`, `"generic"`.
+- `tags` — case-insensitive substring match. `["lang:ts"]` matches the
+  `lang:ts` tag; `["lang:"]` matches any language tag. Multiple tags are ANDed
+  by default; pass `tagMatch: "any"` to OR them.
+- `since` / `until` — ISO date (`"2026-05-01"`) or datetime. A bare `until` date
+  covers the whole day. An unparseable bound is ignored with a warning rather
+  than failing the call.
+
+Example: *"search my claude.ai TypeScript artifacts from this month for the auth
+helper"* →
+`search_contexts({ query: "auth helper", parser: "claude-ai", tags: ["lang:ts"], since: "2026-06-01" })`.
 
 ### Example
 
