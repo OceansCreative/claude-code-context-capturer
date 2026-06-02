@@ -7,4 +7,8 @@ dist/
 .vite
 coverage/
 *.zip
-.claude/
+# .claude/ — selectively ignored so shared config (settings.json,
+# commands/, agents/) can be committed while local/runtime files stay out.
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/worktrees/
