@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: May 2, 2026
+Last updated: June 3, 2026
 
 ## Overview
 
@@ -31,6 +31,7 @@ The extension processes the following on your device only:
 | Buffered captures (if you opt into "Append to buffer" mode) | Let you export multiple captures together later | `chrome.storage.local` on your device |
 | Linked CLAUDE.md file handles (if you opt into "Append to linked CLAUDE.md file" mode, v0.2.0+) | Persist the FileSystemFileHandle the user picked so subsequent captures can append to the same file | `IndexedDB` on your device |
 | URL routing rules (v0.3.0+) | Route different sites to different `CLAUDE.md` files | `IndexedDB` on your device |
+| MCP captures directory handle and stored capture files (if you opt into the MCP store mode, v0.5.0+) | Persist captures as individual Markdown files that the bundled MCP server can hand to Claude Code on demand; dedupe keys let re-captures overwrite the right file | `FileSystemDirectoryHandle` in `IndexedDB`; capture files in the directory you picked, on your disk |
 | Your settings (frontmatter on/off, locale, default mode, etc.) | Persist your preferences | `chrome.storage.sync` on your device, optionally synced via your Chrome account |
 
 None of this data leaves your device through the extension.
@@ -45,6 +46,16 @@ When you capture a conversation on `claude.ai/chat/<id>`:
 - The extension never transmits your conversation to anywhere other than the destinations you have configured (clipboard, in-extension buffer on your device, or your own linked `CLAUDE.md` file on your disk)
 
 You can verify this by inspecting the source: `src/content/parsers/claude-ai.ts` in this repository.
+
+## MCP server (v0.5.0+)
+
+If you enable the MCP store mode, the extension also runs a small Model Context Protocol server that lets Claude Code (or any MCP-aware agent) pull captures on demand instead of you having to paste them. Privacy specifics:
+
+- The MCP server reads from the captures directory **you picked**. It cannot read any other file on your disk.
+- The directory path is validated against `..` traversal and other path injection patterns before any file operation.
+- The server's tools (`get_context`, `list_contexts`, `search_contexts`, `stats_contexts`) operate on files already on your machine — nothing is fetched from any external source.
+- Captures are stored as standalone Markdown files with stable filenames derived from a content hash plus, when applicable, a stable identity (`dedupeKey`, e.g. a claude.ai conversation UUID). Re-capturing the same subject updates the existing file instead of accumulating duplicates.
+- The MCP server only responds to clients you've configured on your own machine.
 
 ## File System Access (v0.2.0+)
 

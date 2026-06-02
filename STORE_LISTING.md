@@ -7,7 +7,7 @@ This file contains the text and asset specs you'll need when submitting the exte
 ## Store listing — short description (132 chars max)
 
 ```
-Capture web pages — and your claude.ai conversations — as Markdown straight into your project's CLAUDE.md. URL-pattern routing.
+Capture web pages and claude.ai chats as Markdown. Append to CLAUDE.md, route by URL, or expose to Claude Code via MCP. Local.
 ```
 
 ## Store listing — detailed description (English)
@@ -25,6 +25,9 @@ What it does:
 • Direct write to CLAUDE.md — pick the file once with the File System Access API; subsequent captures append to it automatically
 • Multi-project routing — link multiple CLAUDE.md files and route by URL glob (e.g. github.com/anthropic/* → one file, zenn.dev/* → another)
 • claude.ai conversation capture — capture your brainstorm conversations with Claude (thinking blocks, tool_use, branches preserved) straight into your project context
+• Artifacts-only capture & range selection (v0.5.0+) — for long claude.ai planning chats, capture just the code/documents Claude wrote or only the last N messages, toggleable from the popup
+• Re-capture updates in place (v0.5.0+) — re-capturing the same claude.ai conversation overwrites the existing capture instead of creating duplicate snapshots
+• MCP server for on-demand context (v0.5.0+) — save captures to a directory and the bundled MCP server hands them to Claude Code only when it asks for them, keeping CLAUDE.md small. Tools: get_context / list_contexts / search_contexts / stats_contexts, with tag and date filtering
 • Site-specific parsers for GitHub, Stack Overflow, Zenn, Qiita, MDN
 • Generic parser (Mozilla Readability) for everything else
 • Selection mode: capture just what you've highlighted
@@ -61,6 +64,9 @@ Claude Code Context Capturer は、開いている Web ページを Markdown に
 • CLAUDE.md への直接書き込み — File System Access API で一度ファイルを指定すれば、以降のキャプチャは自動で append
 • マルチプロジェクト振り分け — URL パターン(glob)で複数の CLAUDE.md を使い分け(例: github.com/anthropic/* → 仕事用、zenn.dev/* → 個人メモ)
 • claude.ai 会話のキャプチャ — claude.ai でブレストした会話を、thinking blocks / tool_use / branch 構造を保ったままプロジェクトの context file に流し込み
+• アーティファクト抽出 & 範囲選択 (v0.5.0+) — 長い claude.ai 設計会話から、Claude が書いたコード／ドキュメントだけ、または直近 N 件のメッセージだけを選んでキャプチャ。popup からトグル可能
+• 再キャプチャは上書き更新 (v0.5.0+) — 同じ claude.ai 会話を再キャプチャすると新しいスナップショットを増やさず既存ファイルを上書きします
+• MCP サーバーによるオンデマンド供給 (v0.5.0+) — キャプチャを専用ディレクトリへ 1 件 1 ファイルで保存し、付属の MCP サーバーが Claude Code から要求された時だけ渡します。CLAUDE.md を肥大化させずに参照可能。tools: get_context / list_contexts / search_contexts / stats_contexts、タグ・日付フィルタ対応
 • GitHub・Stack Overflow・Zenn・Qiita・MDN のサイト別パーサー
 • その他のサイトは Mozilla Readability で本文抽出
 • 選択範囲モード(テキスト選択時はその部分のみ)
