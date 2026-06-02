@@ -86,7 +86,7 @@ Honest positioning: the broader "Web → Markdown" category is crowded — LLMFe
 100% local, MIT licensed, 91 unit tests, real-Chrome e2e for every release.
 
 Repo: https://github.com/OceansCreative/claude-code-context-capturer
-Chrome Web Store: [in review — paste URL once approved]
+Chrome Web Store: https://chromewebstore.google.com/detail/claude-code-context-captu/bnhoinbchkcamklfcpnjplljjodiikfo
 
 Happy to answer questions about the offscreen-doc + IndexedDB pattern, the claude.ai internal API, or about positioning in the AI clipper space.
 ```
