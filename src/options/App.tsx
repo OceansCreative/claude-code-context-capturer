@@ -276,6 +276,12 @@ export default function App() {
           checked={options.wrapInCodeBlock}
           onChange={(v) => setOptions({ ...options, wrapInCodeBlock: v })}
         />
+        <Toggle
+          label="Preview before write"
+          description="Open a preview window so you can trim navigation menus or other cruft before the capture is committed to clipboard / buffer / CLAUDE.md / MCP store."
+          checked={options.previewBeforeWrite}
+          onChange={(v) => setOptions({ ...options, previewBeforeWrite: v })}
+        />
 
         <Field label="Maximum body length (characters, 0 = no limit)">
           <input

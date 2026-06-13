@@ -3,7 +3,7 @@ import type { RuntimeMessage, UserOptions } from '@/shared/types';
 import { readBuffer, type BufferEntry } from '@/shared/buffer-storage';
 import { loadOptions, saveOptions } from '@/shared/options-storage';
 
-type Status = 'idle' | 'capturing' | 'success' | 'error';
+type Status = 'idle' | 'capturing' | 'success' | 'preview-pending' | 'error';
 
 export default function App() {
   const [status, setStatus] = useState<Status>('idle');
@@ -52,6 +52,12 @@ export default function App() {
       if (response.type === 'CAPTURE_ERROR') {
         setErrorMessage(response.error);
         setStatus('error');
+      } else if (response.type === 'CAPTURE_PENDING_PREVIEW') {
+        setStatus('preview-pending');
+        // Popup auto-closes when the new preview window grabs focus, which is
+        // the cleanest exit — but if focus stays here for some reason, fall
+        // back to a short idle reset.
+        setTimeout(() => setStatus('idle'), 2500);
       } else {
         setStatus('success');
         await refreshBuffer();
@@ -152,6 +158,11 @@ export default function App() {
       {status === 'success' && (
         <p className="mt-3 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
           Captured ✓
+        </p>
+      )}
+      {status === 'preview-pending' && (
+        <p className="mt-3 rounded bg-sky-50 px-2 py-1 text-xs text-sky-700">
+          Preview window opened — review there to confirm.
         </p>
       )}
       {status === 'error' && errorMessage && (

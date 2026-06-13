@@ -18,6 +18,7 @@ export default defineConfig({
         popup: resolve(__dirname, 'src/popup/index.html'),
         options: resolve(__dirname, 'src/options/index.html'),
         offscreen: resolve(__dirname, 'src/offscreen/index.html'),
+        preview: resolve(__dirname, 'src/preview/index.html'),
       },
     },
   },

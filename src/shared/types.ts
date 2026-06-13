@@ -94,6 +94,14 @@ export interface UserOptions {
    * matters before it lands in your context.
    */
   claudeAiMaxMessages: number;
+  /**
+   * Show a preview window before writing the capture. Lets the user trim the
+   * captured Markdown (delete unwanted nav menus, sidebar leftovers, etc.)
+   * before it lands in clipboard / buffer / CLAUDE.md / MCP store. Default true
+   * since every Markdown clipper's universal weakness is "captured cruft".
+   * Toggleable from Options or from the preview window's "skip next time".
+   */
+  previewBeforeWrite: boolean;
 }
 
 /**
@@ -132,6 +140,7 @@ export const DEFAULT_OPTIONS: UserOptions = {
   locale: 'en',
   claudeAiArtifactsOnly: false,
   claudeAiMaxMessages: 0,
+  previewBeforeWrite: true,
 };
 
 /** Messages exchanged between background and content scripts. */
@@ -139,7 +148,32 @@ export type RuntimeMessage =
   | { type: 'CAPTURE_PAGE'; options?: CaptureOptions }
   | { type: 'CAPTURE_SELECTION'; options?: CaptureOptions }
   | { type: 'CAPTURE_RESULT'; payload: CapturedContext }
-  | { type: 'CAPTURE_ERROR'; error: string };
+  /** Capture succeeded but is now waiting in a preview window for the user. */
+  | { type: 'CAPTURE_PENDING_PREVIEW'; payload: CapturedContext }
+  | { type: 'CAPTURE_ERROR'; error: string }
+  /** Preview → SW: write the (possibly edited) Markdown to its destination. */
+  | {
+      type: 'PREVIEW_CONFIRM';
+      stageId: string;
+      editedMarkdown: string;
+      skipFutureWrites?: boolean;
+    }
+  /** Preview → SW: discard the staged capture and do nothing. */
+  | { type: 'PREVIEW_CANCEL'; stageId: string };
+
+/**
+ * A captured context staged for user review in the preview window. Holds
+ * everything deliver() needs so the SW can re-enter the delivery pipeline
+ * with the user's (possibly edited) Markdown once they click Confirm.
+ */
+export interface StagedCapture {
+  id: string;
+  payload: CapturedContext;
+  finalMarkdown: string;
+  options: UserOptions;
+  tabId: number;
+  stagedAt: string;
+}
 
 /**
  * One CLAUDE.md routing rule. Captures whose URL matches `pattern` are

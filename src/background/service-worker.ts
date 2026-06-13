@@ -1,9 +1,14 @@
 import { buildFrontmatter, buildSourceFooter } from '@/shared/frontmatter-builder';
-import { loadOptions } from '@/shared/options-storage';
+import { loadOptions, saveOptions } from '@/shared/options-storage';
 import { appendToBuffer } from '@/shared/buffer-storage';
 import { buildEntryHeading } from '@/shared/file-appender';
 import { listRoutes } from '@/shared/handle-store';
 import { resolveRoute } from '@/shared/route-matcher';
+import {
+  stageCapture,
+  loadStagedCapture,
+  removeStagedCapture,
+} from '@/shared/preview-stage';
 import { buildContextSlug, dedupePrefix } from '@/shared/slug';
 import { buildArtifactFiles } from '@/shared/artifact-file';
 import type {
@@ -79,6 +84,39 @@ chrome.commands.onCommand.addListener((command) => {
 // ---------------------------------------------------------------------------
 
 chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResponse) => {
+  if (message.type === 'PREVIEW_CONFIRM') {
+    void (async () => {
+      const staged = await loadStagedCapture(message.stageId);
+      if (!staged) {
+        sendResponse({ ok: false, error: 'Staged capture expired.' });
+        return;
+      }
+      try {
+        // Honor the "skip preview next time" checkbox.
+        if (message.skipFutureWrites) {
+          await saveOptions({ ...staged.options, previewBeforeWrite: false });
+        }
+        await deliver(
+          message.editedMarkdown,
+          staged.payload,
+          staged.options,
+          staged.tabId
+        );
+        await notify('Captured ✓', 'success');
+        await removeStagedCapture(message.stageId);
+        sendResponse({ ok: true });
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        await notify(errMsg, 'error');
+        sendResponse({ ok: false, error: errMsg });
+      }
+    })();
+    return true;
+  }
+  if (message.type === 'PREVIEW_CANCEL') {
+    void removeStagedCapture(message.stageId).then(() => sendResponse({ ok: true }));
+    return true;
+  }
   if (message.type === 'CAPTURE_PAGE' || message.type === 'CAPTURE_SELECTION') {
     void (async () => {
       const tab = await getActiveTab();
@@ -127,6 +165,19 @@ async function requestCapture(
     }
 
     const finalMarkdown = renderFinalMarkdown(response.payload, options);
+
+    if (options.previewBeforeWrite) {
+      // Stage and surface the preview window. The user reviews, possibly
+      // edits, then Confirm re-enters deliver via the PREVIEW_CONFIRM handler.
+      const stageId = await stageCapture(
+        response.payload,
+        finalMarkdown,
+        options,
+        tabId
+      );
+      await openPreviewWindow(stageId);
+      return { type: 'CAPTURE_PENDING_PREVIEW', payload: response.payload };
+    }
 
     await deliver(finalMarkdown, response.payload, options, tabId);
     await notify('Captured ✓', 'success');
@@ -377,6 +428,26 @@ async function waitForOffscreenReady(timeoutMs = 2000): Promise<void> {
   }
   const detail = lastError instanceof Error ? lastError.message : String(lastError);
   throw new Error(`offscreen-not-ready: gave up after ${timeoutMs}ms (${detail})`);
+}
+
+/**
+ * Open the preview window for a staged capture. The user reviews / edits /
+ * confirms there; that triggers PREVIEW_CONFIRM back to this SW, which
+ * re-enters the delivery pipeline with the edited Markdown.
+ *
+ * `popup` window type so it floats over the current window without consuming
+ * a real browser tab.
+ */
+async function openPreviewWindow(stageId: string): Promise<void> {
+  const url = chrome.runtime.getURL(
+    `src/preview/index.html?id=${encodeURIComponent(stageId)}`
+  );
+  await chrome.windows.create({
+    url,
+    type: 'popup',
+    width: 900,
+    height: 700,
+  });
 }
 
 async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
