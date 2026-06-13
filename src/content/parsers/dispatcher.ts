@@ -4,6 +4,7 @@ import { canHandleZenn, parseZenn } from './zenn';
 import { canHandleQiita, parseQiita } from './qiita';
 import { canHandleMdn, parseMdn } from './mdn';
 import { canHandleClaudeAi, parseClaudeAi } from './claude-ai';
+import { canHandleYoutube, parseYoutube } from './youtube';
 import { parseGenericPage } from './generic';
 import type { CaptureOptions, CapturedContext } from '@/shared/types';
 
@@ -19,6 +20,7 @@ export async function dispatchPageParser(
   options: CaptureOptions = {}
 ): Promise<CapturedContext> {
   if (canHandleClaudeAi()) return parseClaudeAi(options);
+  if (canHandleYoutube()) return parseYoutube(options);
   if (canHandleGitHub()) return parseGitHub();
   if (canHandleStackOverflow()) return parseStackOverflow();
   if (canHandleZenn()) return parseZenn();

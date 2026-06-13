@@ -6,6 +6,15 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v0.8.0 — YouTube transcript parser
+
+- **New:** YouTube site-specific parser. Captures the **transcript** (manual or auto-generated, English preferred), plus title / channel / duration / description, into Markdown. When the video has chapters they become `### [mm:ss] <Title>` sub-headings and segments are slotted under the right chapter; otherwise transcript lines are listed linearly with `[mm:ss]` timestamps.
+- Handles `youtube.com/watch?v=`, `youtube.com/shorts/`, `youtube.com/embed/`, and `youtu.be/` URLs.
+- Re-capturing the same video updates the stored entry rather than accumulating snapshots (stable `dedupeKey: youtube:<videoId>`). Tags include `youtube`, `channel:<name>`, `captions:auto|manual`, `lang:<code>`.
+- Defensive: failure modes (no captions / player data not loaded / 429 from YouTube) surface descriptive errors instead of producing empty captures.
+- Permissions unchanged. 22 new unit tests covering URL extraction, caption-track preference, player-response parsing (including the deeply-nested chapters path), Markdown render, and three error paths.
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v0.8.0) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v0.7.0...v0.8.0)
+
 ## v0.7.0 — MCP server tool-set profiles + token-cost measurement
 
 - **New:** `CCC_MCP_TOOLS` env var on the MCP server. Pick a profile (`minimal`, `lean`, `search`, `discover`, `full`) or pass an explicit comma-separated tool list. Trims the per-turn token cost the MCP host pays just to know each tool exists.

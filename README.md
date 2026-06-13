@@ -51,6 +51,7 @@ I see the same.
   - Zenn
   - Qiita
   - MDN Web Docs
+  - **YouTube** *(v0.8.0+)* — transcript（manual / auto-generated）と動画メタを抽出。chapter があれば見出しでセグメント分割、なければ `[mm:ss]` タイムスタンプ付き本文
   - その他のサイトは Mozilla Readability で本文抽出
 - **メタ情報の埋め込み**：URL・タイトル・取得日時を YAML frontmatter で付与
 - **CLAUDE.md への直書き** *(v0.2.0+)*：プロジェクトの `CLAUDE.md` を一度ピックすれば、以降のキャプチャは File System Access API 経由で自動 append。コピペ不要
@@ -255,7 +256,7 @@ In short: a clipper purpose-built for AI agent context files. If you want a gene
 
 - **One-click capture** — Toolbar icon or keyboard shortcut
 - **Selection mode** — Capture only what you've selected
-- **Site-specific parsers** for GitHub, Stack Overflow, Zenn, Qiita, MDN
+- **Site-specific parsers** for GitHub, Stack Overflow, Zenn, Qiita, MDN, and **YouTube** *(v0.8.0+)* — pulls the transcript + chapters + metadata, not just the title
 - **YAML frontmatter** with URL, title, captured_at, author, tags
 - **Direct CLAUDE.md write** *(v0.2.0+)* — Link a `CLAUDE.md` once via the File System Access API; subsequent captures append directly, no copy/paste
 - **Multi-project routing** *(v0.3.0+)* — Link multiple `CLAUDE.md` files with URL glob patterns. Captures from `github.com/anthropic/*` go to one file, `zenn.dev/*` to another, unmatched URLs to a default route

@@ -65,6 +65,8 @@ export type ParserName =
   | 'qiita'
   | 'mdn'
   | 'claude-ai'
+  | 'claude-ai-artifact'
+  | 'youtube'
   | 'generic'
   | 'selection';
 
