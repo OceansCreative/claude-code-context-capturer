@@ -1,6 +1,6 @@
 {
   "name": "claude-code-context-capturer-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server that exposes web pages and claude.ai conversations captured by the Claude Code Context Capturer extension to Claude Code — on demand, without bloating CLAUDE.md.",
   "type": "module",
   "bin": {
@@ -18,7 +18,8 @@
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "measure-tokens": "tsx scripts/measure-tokens.ts"
   },
   "keywords": [
     "mcp",
@@ -42,7 +43,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.5.3",
-    "vitest": "^2.0.2"
+    "vitest": "^2.0.2",
+    "zod-to-json-schema": "^3.23.0"
   }
 }

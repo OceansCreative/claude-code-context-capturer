@@ -85,6 +85,52 @@ server can serve to Claude Code.
 | `get_context` | Fetch one capture by `slug` (fuzzy matching). `format:"code"` returns just the raw code (fences + frontmatter stripped) — ideal for single artifacts. |
 | `delete_context` | Remove a capture by `slug` once it's been incorporated. |
 
+### Trim the tool set to save tokens *(v0.2.0+)*
+
+MCP hosts load every connected server's full tool definitions (name +
+description + JSON-schema) into the LLM's context on **every turn**, whether
+the tools are called or not. Set `CCC_MCP_TOOLS` to expose only the subset
+you actually use:
+
+| Profile | Tools | Per-turn cost (est. tokens) | Savings vs full |
+|---------|-------|------------------------------:|----------------:|
+| `minimal` | `get_context` | 232 | 82% |
+| `lean` | `get_context` + `list_contexts` | 616 | 52% |
+| `search` | `get_context` + `search_contexts` | 644 | 50% |
+| `discover` | `get_context` + `list_contexts` + `search_contexts` | 1,027 | 20% |
+| `full` *(default)* | all 5 | 1,282 | — |
+
+You can also pass an explicit comma-separated list, e.g.
+`CCC_MCP_TOOLS=get_context,stats_contexts`. Unknown tool names are logged to
+stderr and dropped.
+
+```jsonc
+// In your Claude Code mcp config:
+{
+  "mcpServers": {
+    "ccc": {
+      "command": "ccc-mcp",
+      "env": {
+        "CCC_CONTEXTS_DIR": "/Users/you/code/your-project/.captures",
+        "CCC_MCP_TOOLS": "lean"
+      }
+    }
+  }
+}
+```
+
+Per-tool costs (run `npm run measure-tokens` to regenerate):
+
+| Tool | Chars | Est. tokens |
+|------|------:|------------:|
+| `get_context` | 812 | 232 |
+| `stats_contexts` | 440 | 126 |
+| `delete_context` | 452 | 130 |
+| `list_contexts` | 1,343 | 384 |
+| `search_contexts` | 1,439 | 412 |
+
+(Approximation: `tokens ≈ chars/3.5`. Actual `cl100k_base` tokens land within ±10%.)
+
 ### Artifacts as individual files
 
 When you capture a claude.ai conversation in **mcp-store** mode, each code or

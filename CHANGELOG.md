@@ -6,6 +6,28 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v0.7.0 — MCP server tool-set profiles + token-cost measurement
+
+- **New:** `CCC_MCP_TOOLS` env var on the MCP server. Pick a profile (`minimal`, `lean`, `search`, `discover`, `full`) or pass an explicit comma-separated tool list. Trims the per-turn token cost the MCP host pays just to know each tool exists.
+- **New:** `npm run measure-tokens` script in `mcp-server/` produces a per-tool and per-profile breakdown of how many chars / approximate tokens each tool definition costs the LLM. Results documented in the mcp-server README so users can make informed profile choices.
+- The `lean` profile saves ~666 tokens/turn vs full (~52%); `minimal` saves ~1,050 tokens/turn (~82%) when the agent already knows the slug to fetch.
+- **No changes to the browser extension itself** — extension stays at v0.6.0 on the Chrome Web Store. The mcp-server npm package bumps to v0.2.0; the git tag v0.7.0 marks the milestone.
+- 12 new unit tests for profile parsing (51 total in mcp-server).
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v0.7.0) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v0.6.0...v0.7.0)
+
+## v0.6.0 — Preview before write
+
+- **New:** Preview window between Capture and the actual write. Trim captured Markdown (drop nav menus, footers, sidebar leftovers) before it lands in clipboard / buffer / CLAUDE.md / MCP store. Default-on; toggleable in Options and via a "skip next time" checkbox on the preview itself.
+- Implementation: SW stages payload + rendered Markdown + options + tabId into `chrome.storage.session`; opens `src/preview/index.html?id=...` as a popup-type window via `chrome.windows.create`. Confirm re-enters the existing `deliver()` pipeline with the user's edited content; Cancel discards.
+- Permissions unchanged from v0.5.x.
+- 4 new unit tests for the staging helper (95 total).
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v0.6.0) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v0.5.1...v0.6.0)
+
+## v0.5.1 — contextMenus duplicate-id fix
+
+- **Fix:** `chrome.contextMenus.removeAll()` before re-creating on every `onInstalled`. The red "エラー" badge that appeared on every extension reload (with `Unchecked runtime.lastError: Cannot create item with duplicate id ccc-capture-page`) is gone. The bug was benign — the first registration's menu items were already there and right-click capture worked normally — but it polluted the extensions page and obscured real errors.
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v0.5.1) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v0.5.0...v0.5.1)
+
 ## v0.5.0 — claude.ai artifacts + MCP server
 
 - **New:** claude.ai artifact extraction (capture just the code / documents Claude wrote, drop the chat) and range selection (last N messages of a long planning conversation). Toggleable from the popup whenever you're on a `claude.ai/chat/*` URL.

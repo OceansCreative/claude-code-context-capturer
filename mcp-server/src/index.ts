@@ -35,8 +35,9 @@ import {
 import { searchContexts } from './search.js';
 import { filterEntries, type FilterCriteria } from './filter.js';
 import { computeStats, formatBytes } from './stats.js';
+import { parseEnabledTools, type ToolName } from './profiles.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 const contextsDir = resolveContextsDir();
 const store = new ContextStore(contextsDir);
@@ -45,6 +46,30 @@ const server = new McpServer({
   name: 'claude-code-context-capturer',
   version: VERSION,
 });
+
+// Per-turn token cost reminder: the MCP host loads every registered tool's
+// description + JSON-schema into the LLM's context on every message, whether
+// or not the tool is called. Honoring CCC_MCP_TOOLS lets users prune the set
+// down to what they actually use.
+const { tools: ENABLED_TOOLS, warnings: TOOL_WARNINGS } = parseEnabledTools(
+  process.env.CCC_MCP_TOOLS
+);
+for (const w of TOOL_WARNINGS) {
+  // stderr so it doesn't pollute the JSON-RPC channel on stdout.
+  console.error(`[ccc-mcp] ${w}`);
+}
+
+/**
+ * Whether the user has enabled this tool. Each tool registration below is
+ * wrapped in `if (isToolEnabled(...))` rather than going through a wrapper —
+ * a wrapper would have to choose between losing the SDK's input-schema →
+ * handler-args type inference (broad `any`) or chasing the SDK's overloaded
+ * registerTool signature (Parameters<…> collapses to the last overload).
+ * Inline guards keep every call site fully typed.
+ */
+function isToolEnabled(name: ToolName): boolean {
+  return ENABLED_TOOLS.includes(name);
+}
 
 // Reusable filter fields shared by list_contexts and search_contexts.
 const FILTER_FIELDS = {
@@ -93,7 +118,7 @@ function criteriaFrom(args: {
 // list_contexts
 // ---------------------------------------------------------------------------
 
-server.registerTool(
+if (isToolEnabled('list_contexts')) server.registerTool(
   'list_contexts',
   {
     description:
@@ -136,7 +161,7 @@ server.registerTool(
 // get_context
 // ---------------------------------------------------------------------------
 
-server.registerTool(
+if (isToolEnabled('get_context')) server.registerTool(
   'get_context',
   {
     description:
@@ -177,7 +202,7 @@ server.registerTool(
 // search_contexts
 // ---------------------------------------------------------------------------
 
-server.registerTool(
+if (isToolEnabled('search_contexts')) server.registerTool(
   'search_contexts',
   {
     description:
@@ -239,7 +264,7 @@ server.registerTool(
 // stats_contexts
 // ---------------------------------------------------------------------------
 
-server.registerTool(
+if (isToolEnabled('stats_contexts')) server.registerTool(
   'stats_contexts',
   {
     description:
@@ -280,7 +305,7 @@ server.registerTool(
 // delete_context
 // ---------------------------------------------------------------------------
 
-server.registerTool(
+if (isToolEnabled('delete_context')) server.registerTool(
   'delete_context',
   {
     description:
