@@ -31,15 +31,21 @@ import type {
 // ---------------------------------------------------------------------------
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: 'ccc-capture-page',
-    title: 'Capture page as Claude Code context',
-    contexts: ['page'],
-  });
-  chrome.contextMenus.create({
-    id: 'ccc-capture-selection',
-    title: 'Capture selection as Claude Code context',
-    contexts: ['selection'],
+  // onInstalled fires on install AND on every extension update / reload.
+  // contextMenus.create() throws "Cannot create item with duplicate id" the
+  // second time around because Chrome persists menu items across reloads.
+  // Wipe first, then recreate — the standard MV3 idiom.
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: 'ccc-capture-page',
+      title: 'Capture page as Claude Code context',
+      contexts: ['page'],
+    });
+    chrome.contextMenus.create({
+      id: 'ccc-capture-selection',
+      title: 'Capture selection as Claude Code context',
+      contexts: ['selection'],
+    });
   });
 });
 
