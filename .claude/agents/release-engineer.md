@@ -114,10 +114,29 @@ gh release view vX.Y.Z --json assets --jq '.assets | map(.name)'
 
 ### 11. Report to orchestrator
 
-- Release URL
-- Zip path on Desktop (full absolute path)
-- Whether permissions changed (so the human knows if Web Store update needs new justifications)
-- One sentence on what the human does next: "Upload `~/Desktop/claude-code-context-capturer-vX.Y.Z.zip` to Chrome Web Store as a Package update on the existing listing."
+Format the report exactly as below. The user keeps forgetting the upload
+flow, so always include the inline 6-step recipe — do not just link to
+the doc, paste the steps.
+
+- Release URL: `<gh release URL>`
+- Zip path on Desktop: `~/Desktop/claude-code-context-capturer-vX.Y.Z.zip`
+- Permissions: `unchanged` or `<list of added/removed permissions>`
+- Tests: `<N>/<N> passing`
+- Diff: `[v<prev>...vX.Y.Z](compare URL)`
+
+**Chrome Web Store update — paste this every release:**
+
+1. Open https://chrome.google.com/webstore/devconsole/ (account: `oceanscreative0311`)
+2. Click the **Claude Code Context Capturer** item
+3. Left sidebar → **パッケージ / Package**
+4. Click **新しいパッケージをアップロード / Upload new package** → choose
+   `~/Desktop/claude-code-context-capturer-vX.Y.Z.zip`
+5. Verify version shows `X.Y.Z`. If permissions changed, also visit
+   **プライバシー / Privacy** tab and copy fresh justifications from
+   `STORE_LISTING.md`. Otherwise leave other tabs untouched.
+6. Click **審査用に送信 / Submit for review**
+
+Full procedure with troubleshooting: `docs/WEB_STORE_UPDATE.md`
 
 ## Constraints
 
