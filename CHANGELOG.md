@@ -6,6 +6,16 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v0.9.0 — Multi-agent fan-out (Cursor / Windsurf / Aider / Claude Code)
+
+- **New:** A single context-file route can now write to **multiple** target files at once. People juggling Claude Code + Cursor (or Windsurf, or Aider) in the same project no longer need duplicate routes — link your `CLAUDE.md`, then click "+ Link another file" to add `.cursorrules` / `.windsurfrules` / etc. One capture lands in all targets.
+- Schema: `ClaudeMdRoute.handle: FileSystemFileHandle` → `handles: FileSystemFileHandle[]`. Pre-v0.9.0 records are migrated lazily on first read (wrap the single handle into a 1-element array) — no user action required.
+- `OffscreenAppendResult` reports per-file success; if some handles succeed and others lapse (e.g. one file's permission expired), the capture is still committed to the working files and `partialFailures` flags the bad ones.
+- Options page: the section is now "Context file routes" (was "CLAUDE.md routes"). Each route shows every linked file with its own permission badge and an `unlink` button; the description calls out target paths for Claude Code, Cursor, and Windsurf so users know what to point at.
+- Real-Chrome e2e: 5/5 pass — one route with two OPFS handles (CLAUDE.md + .cursorrules) writes the same Markdown to both files with proper entry headings + frontmatter.
+- Permissions unchanged. 117/117 unit tests pass.
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v0.9.0) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v0.8.0...v0.9.0)
+
 ## v0.8.0 — YouTube transcript parser
 
 - **New:** YouTube site-specific parser. Captures the **transcript** (manual or auto-generated, English preferred), plus title / channel / duration / description, into Markdown. When the video has chapters they become `### [mm:ss] <Title>` sub-headings and segments are slotted under the right chapter; otherwise transcript lines are listed linearly with `[mm:ss]` timestamps.

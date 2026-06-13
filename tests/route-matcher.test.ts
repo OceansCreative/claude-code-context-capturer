@@ -9,7 +9,7 @@ function route(p: Partial<ClaudeMdRoute>): ClaudeMdRoute {
     pattern: p.pattern ?? '',
     isDefault: p.isDefault ?? false,
     createdAt: p.createdAt ?? '2026-01-01T00:00:00Z',
-    handle: {} as FileSystemFileHandle,
+    handles: [{} as FileSystemFileHandle],
   };
 }
 

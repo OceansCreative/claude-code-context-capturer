@@ -62,34 +62,85 @@ async function appendToRoute(
     return { ok: false, reason: 'no-handle', message: 'Route is no longer linked.' };
   }
 
-  // Permission may have lapsed since the user picked the file. We can only
-  // re-prompt from a window with a transient user activation, which the
-  // offscreen doc lacks — report back and let the UI ask the user to
-  // re-grant from the options page.
-  const perm = await route.handle.queryPermission({ mode: 'readwrite' });
-  if (perm !== 'granted') {
+  if (!route.handles || route.handles.length === 0) {
     return {
       ok: false,
-      reason: 'permission-denied',
-      message: `Re-link "${route.label}" from the options page to grant write access.`,
+      reason: 'no-handle',
+      message: `Route "${route.label}" has no linked files. Link at least one in the options page.`,
     };
   }
 
-  try {
-    const file = await route.handle.getFile();
-    const existing = file.size > 0 ? await file.text() : '';
-    const block = buildAppendBlock(heading, content);
-    const next = existing + block;
+  const block = buildAppendBlock(heading, content);
+  const succeeded: string[] = [];
+  const partialFailures: { fileName: string; reason: string }[] = [];
 
-    const writable = await route.handle.createWritable({ keepExistingData: false });
-    await writable.write(next);
-    await writable.close();
+  for (const handle of route.handles) {
+    const fileName = handle.name;
+    // Permission may have lapsed since the user picked the file. We can only
+    // re-prompt from a window with a transient user activation, which the
+    // offscreen doc lacks — record this handle as a partial failure so the
+    // UI can ask the user to re-grant from the options page without losing
+    // writes that DID succeed to sibling handles.
+    let perm: PermissionState;
+    try {
+      perm = await handle.queryPermission({ mode: 'readwrite' });
+    } catch (err) {
+      partialFailures.push({
+        fileName,
+        reason: `permission probe failed: ${err instanceof Error ? err.message : String(err)}`,
+      });
+      continue;
+    }
+    if (perm !== 'granted') {
+      partialFailures.push({
+        fileName,
+        reason: `permission lapsed (re-link "${route.label}" → ${fileName} in options)`,
+      });
+      continue;
+    }
 
-    return { ok: true, fileName: route.handle.name };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { ok: false, reason: 'write-failed', message: msg };
+    try {
+      const file = await handle.getFile();
+      const existing = file.size > 0 ? await file.text() : '';
+      const next = existing + block;
+
+      const writable = await handle.createWritable({ keepExistingData: false });
+      await writable.write(next);
+      await writable.close();
+
+      succeeded.push(fileName);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      partialFailures.push({ fileName, reason: msg });
+    }
   }
+
+  if (succeeded.length === 0) {
+    // Every handle failed — surface the first reason verbatim so the SW's
+    // error message includes something actionable. permission-denied gets
+    // priority (it's the most common and the popup has a targeted fix UI).
+    const permLapse = partialFailures.find((f) => f.reason.startsWith('permission lapsed'));
+    if (permLapse) {
+      return {
+        ok: false,
+        reason: 'permission-denied',
+        message: `All targets failed. ${permLapse.fileName}: ${permLapse.reason}`,
+      };
+    }
+    return {
+      ok: false,
+      reason: 'write-failed',
+      message: partialFailures
+        .map((f) => `${f.fileName}: ${f.reason}`)
+        .join(' · '),
+    };
+  }
+
+  return {
+    ok: true,
+    fileNames: succeeded,
+    ...(partialFailures.length > 0 ? { partialFailures } : {}),
+  };
 }
 
 /**

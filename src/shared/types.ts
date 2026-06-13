@@ -196,8 +196,15 @@ export interface ClaudeMdRoute {
   isDefault: boolean;
   /** ISO 8601 — used only to display "linked at …" in the UI. */
   createdAt: string;
-  /** The actual on-disk file. */
-  handle: FileSystemFileHandle;
+  /**
+   * Every on-disk file this route writes to. The capture is appended to ALL
+   * handles in order. v0.9.0+ — lets one URL pattern fan out to e.g. both
+   * `CLAUDE.md` (Claude Code) and `.cursorrules` (Cursor) so a developer
+   * juggling multiple AI agents stays in sync without setting up duplicate
+   * routes. Pre-v0.9.0 records used a single `handle` field and are
+   * migrated lazily to `handles: [handle]` on first read.
+   */
+  handles: FileSystemFileHandle[];
 }
 
 /**
@@ -261,7 +268,13 @@ export type OffscreenMessage =
 
 /** Result returned from the offscreen document for file-append operations. */
 export type OffscreenAppendResult =
-  | { ok: true; fileName: string }
+  | {
+      ok: true;
+      /** Files written successfully (one route can fan out to several). */
+      fileNames: string[];
+      /** Per-file failures when some handles succeeded and others didn't. */
+      partialFailures?: { fileName: string; reason: string }[];
+    }
   | {
       ok: false;
       reason: 'no-handle' | 'permission-denied' | 'write-failed' | 'no-route';

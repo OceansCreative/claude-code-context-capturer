@@ -54,7 +54,8 @@ function tx<T>(
 export async function listRoutes(): Promise<ClaudeMdRoute[]> {
   await migrateLegacyHandle();
   const all = await tx<ClaudeMdRoute[]>(STORE_ROUTES, 'readonly', (s) => s.getAll());
-  return all.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const migrated = await Promise.all(all.map(migrateLegacySingleHandle));
+  return migrated.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 /** Insert or replace a route by id. */
@@ -64,7 +65,43 @@ export async function saveRoute(route: ClaudeMdRoute): Promise<void> {
 
 /** Look up a single route by id. */
 export async function getRoute(id: string): Promise<ClaudeMdRoute | undefined> {
-  return tx<ClaudeMdRoute | undefined>(STORE_ROUTES, 'readonly', (s) => s.get(id));
+  const route = await tx<ClaudeMdRoute | undefined>(
+    STORE_ROUTES,
+    'readonly',
+    (s) => s.get(id)
+  );
+  if (!route) return undefined;
+  return migrateLegacySingleHandle(route);
+}
+
+/**
+ * Lazy in-place migration: a route written before v0.9.0 has `handle:
+ * FileSystemFileHandle` rather than `handles: FileSystemFileHandle[]`. On
+ * first read we wrap the single handle into an array and persist the new
+ * shape. After this runs once per route, no further migration cost.
+ */
+async function migrateLegacySingleHandle(route: ClaudeMdRoute): Promise<ClaudeMdRoute> {
+  const legacy = route as ClaudeMdRoute & { handle?: FileSystemFileHandle };
+  if (Array.isArray(route.handles) && route.handles.length > 0) {
+    // Already migrated; just clean up any stray legacy field if it lingered.
+    if (legacy.handle) {
+      delete legacy.handle;
+      await saveRoute(route);
+    }
+    return route;
+  }
+  if (legacy.handle) {
+    const next: ClaudeMdRoute = {
+      ...route,
+      handles: [legacy.handle],
+    };
+    delete (next as { handle?: FileSystemFileHandle }).handle;
+    await saveRoute(next);
+    return next;
+  }
+  // Defensive: route with neither field — leave empty handles[], caller
+  // surfaces an actionable error.
+  return { ...route, handles: [] };
 }
 
 /** Delete a route by id. */
@@ -121,7 +158,7 @@ async function migrateLegacyHandle(): Promise<void> {
     pattern: '',
     isDefault: true,
     createdAt: new Date().toISOString(),
-    handle: legacy,
+    handles: [legacy],
   };
   await tx(STORE_ROUTES, 'readwrite', (s) => s.put(migrated));
   await tx(STORE_KV, 'readwrite', (s) => s.delete(LEGACY_KEY));

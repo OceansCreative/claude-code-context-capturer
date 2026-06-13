@@ -27,7 +27,10 @@ import {
 } from '@/shared/types';
 
 interface RouteRow extends ClaudeMdRoute {
+  /** Aggregate permission: 'granted' iff every handle is granted. */
   permission: PermissionState;
+  /** Per-handle perm state for the per-file UI badges. */
+  perHandle: { name: string; permission: PermissionState }[];
 }
 
 export default function App() {
@@ -101,10 +104,24 @@ export default function App() {
   async function refreshRoutes() {
     const list = await listRoutes();
     const enriched: RouteRow[] = await Promise.all(
-      list.map(async (r) => ({
-        ...r,
-        permission: await r.handle.queryPermission({ mode: 'readwrite' }),
-      }))
+      list.map(async (r) => {
+        const perHandle = await Promise.all(
+          r.handles.map(async (h) => ({
+            name: h.name,
+            permission: await h.queryPermission({ mode: 'readwrite' }),
+          }))
+        );
+        const allGranted =
+          perHandle.length > 0 && perHandle.every((p) => p.permission === 'granted');
+        return {
+          ...r,
+          perHandle,
+          // Aggregate badge: only "granted" when every handle is good. Any
+          // lapsed handle drops the route's overall status — the per-handle
+          // badges below tell the user exactly which file needs a re-grant.
+          permission: allGranted ? 'granted' : 'prompt',
+        };
+      })
     );
     setRoutes(enriched);
   }
@@ -161,9 +178,68 @@ export default function App() {
       pattern,
       isDefault,
       createdAt: new Date().toISOString(),
-      handle,
+      handles: [handle],
     };
     await saveRoute(route);
+    await refreshRoutes();
+  }
+
+  /** v0.9.0+: append another target file to an existing route. */
+  async function handleAddHandleToRoute(routeId: string) {
+    if (!('showOpenFilePicker' in window)) {
+      alert('Your browser does not support the File System Access API.');
+      return;
+    }
+    const r = routes.find((x) => x.id === routeId);
+    if (!r) return;
+
+    let handle: FileSystemFileHandle;
+    try {
+      [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown'] } }],
+        multiple: false,
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      alert(`Could not pick file: ${err instanceof Error ? err.message : String(err)}`);
+      return;
+    }
+    const perm = await handle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') {
+      alert('Write permission was not granted.');
+      return;
+    }
+    // Reject the same file twice — comparing by name is loose but
+    // FileSystemFileHandle has isSameEntry; not all Chromes implement it
+    // synchronously, so fall back to name comparison if needed.
+    for (const existing of r.handles) {
+      try {
+        if (await existing.isSameEntry?.(handle)) {
+          alert(`"${handle.name}" is already linked to this route.`);
+          return;
+        }
+      } catch {
+        if (existing.name === handle.name) {
+          alert(`"${handle.name}" is already linked to this route.`);
+          return;
+        }
+      }
+    }
+
+    await saveRoute({ ...r, handles: [...r.handles, handle] });
+    await refreshRoutes();
+  }
+
+  async function handleRemoveHandleFromRoute(routeId: string, idx: number) {
+    const r = routes.find((x) => x.id === routeId);
+    if (!r) return;
+    const nextHandles = r.handles.filter((_, i) => i !== idx);
+    if (nextHandles.length === 0) {
+      if (!confirm('That is the last file on this route. Remove the whole route?')) return;
+      await deleteRoute(r.id);
+    } else {
+      await saveRoute({ ...r, handles: nextHandles });
+    }
     await refreshRoutes();
   }
 
@@ -177,7 +253,12 @@ export default function App() {
     const r = routes.find((x) => x.id === id);
     if (!r) return;
     try {
-      await r.handle.requestPermission({ mode: 'readwrite' });
+      // Re-request for every handle on the route; Chrome only prompts once per
+      // origin per user gesture, but stale handles still need the call to
+      // refresh their internal state.
+      for (const h of r.handles) {
+        await h.requestPermission({ mode: 'readwrite' });
+      }
       await refreshRoutes();
     } catch (err) {
       alert(`Could not re-grant: ${err instanceof Error ? err.message : String(err)}`);
@@ -368,7 +449,9 @@ export default function App() {
 
       <section className="mb-10 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">CLAUDE.md routes ({routes.length})</h2>
+          <h2 className="text-lg font-semibold">
+            Context file routes ({routes.length})
+          </h2>
           <button
             type="button"
             onClick={() => void handleAddRoute()}
@@ -382,6 +465,14 @@ export default function App() {
           Mark a route as <em>default</em> (empty pattern) to catch unmatched URLs.
           Use <code className="rounded bg-slate-100 px-1">*</code> as a wildcard,
           e.g. <code className="rounded bg-slate-100 px-1">github.com/anthropic/*</code>.
+          A single route can write to multiple files — pick the one your AI
+          agent reads (<code className="rounded bg-slate-100 px-1">CLAUDE.md</code>
+          for Claude Code,
+          <code className="rounded bg-slate-100 px-1"> .cursorrules</code> or
+          <code className="rounded bg-slate-100 px-1"> .cursor/rules/*.mdc</code>
+          for Cursor,
+          <code className="rounded bg-slate-100 px-1"> .windsurfrules</code> for
+          Windsurf, etc.) and add others with &ldquo;+ Link another file&rdquo;.
         </p>
 
         {routes.length === 0 ? (
@@ -413,13 +504,42 @@ export default function App() {
                         {r.permission === 'granted' ? 'write granted' : 'needs re-grant'}
                       </span>
                     </div>
-                    <div className="mt-1 truncate text-xs text-slate-500">
-                      <code className="rounded bg-slate-100 px-1">{r.handle.name}</code>
-                      {' · '}
-                      pattern:{' '}
-                      <code className="rounded bg-slate-100 px-1">
-                        {r.pattern || '(default)'}
-                      </code>
+                    <div className="mt-1 text-xs text-slate-500">
+                      <div className="mb-1">
+                        pattern:{' '}
+                        <code className="rounded bg-slate-100 px-1">
+                          {r.pattern || '(default)'}
+                        </code>
+                      </div>
+                      <ul className="space-y-1">
+                        {r.perHandle.map((h, idx) => (
+                          <li key={`${h.name}-${idx}`} className="flex items-center gap-2">
+                            <code className="truncate rounded bg-slate-100 px-1">{h.name}</code>
+                            {h.permission !== 'granted' && (
+                              <span className="rounded bg-amber-100 px-1 text-[10px] font-semibold uppercase text-amber-700">
+                                needs re-grant
+                              </span>
+                            )}
+                            {r.handles.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => void handleRemoveHandleFromRoute(r.id, idx)}
+                                className="text-[10px] text-slate-400 hover:text-rose-600"
+                                title="Stop writing this route to this file"
+                              >
+                                unlink
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={() => void handleAddHandleToRoute(r.id)}
+                        className="mt-1 text-[11px] text-slate-600 underline hover:text-slate-900"
+                      >
+                        + Link another file (e.g. .cursorrules, .windsurfrules)
+                      </button>
                     </div>
                   </div>
                   <div className="flex flex-shrink-0 gap-2">

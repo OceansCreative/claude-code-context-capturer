@@ -56,6 +56,7 @@ I see the same.
 - **メタ情報の埋め込み**：URL・タイトル・取得日時を YAML frontmatter で付与
 - **CLAUDE.md への直書き** *(v0.2.0+)*：プロジェクトの `CLAUDE.md` を一度ピックすれば、以降のキャプチャは File System Access API 経由で自動 append。コピペ不要
 - **マルチプロジェクト振り分け** *(v0.3.0+)*：URL パターン（glob）で複数の CLAUDE.md を使い分け。例：`github.com/anthropic/*` → anthropic 用、`zenn.dev/*` → 個人メモ、無マッチは default ルート
+- **マルチエージェント同時書き込み** *(v0.9.0+)*：1 つのルートが `CLAUDE.md`（Claude Code）+ `.cursorrules`（Cursor）+ `.windsurfrules`（Windsurf）など複数のコンテキストファイルへ**同時 append**。AI エージェントを並行して使ってる人が単一のキャプチャで全部更新できる
 - **claude.ai 会話のキャプチャ** *(v0.4.0+)*：claude.ai でブレストした会話をワンクリックで CLAUDE.md に流し込み。share リンクの 403 問題、手コピペの労力を解消。内部 API を叩いて thinking blocks・tool_use・branch 構造まで保持
 - **アーティファクト抽出 & 範囲選択** *(v0.5.0+)*：claude.ai キャプチャで「**アーティファクトだけ**」（Claude が書いたコード／ドキュメントを整形済みコードブロックで抽出、会話は捨てる）や「**直近 N 件のみ**」を選択可能。長い設計会話から必要な部分だけを取り込めます。アーティファクトは同一 ID の更新を最新版に集約。claude.ai のチャットを開いているときは**ポップアップから直接トグル**できます
 - **同一会話は上書き更新（siloを作らない）** *(v0.5.0+)*：MCP ストアモードで同じ claude.ai 会話を再キャプチャすると、**新しいスナップショットを増やさず既存ファイルを上書き**します。会話タイトルが変わっても安定 ID で追跡するので、ストアは常に single source of truth に保たれます（古いアーティファクトファイルも掃除）
@@ -260,6 +261,7 @@ In short: a clipper purpose-built for AI agent context files. If you want a gene
 - **YAML frontmatter** with URL, title, captured_at, author, tags
 - **Direct CLAUDE.md write** *(v0.2.0+)* — Link a `CLAUDE.md` once via the File System Access API; subsequent captures append directly, no copy/paste
 - **Multi-project routing** *(v0.3.0+)* — Link multiple `CLAUDE.md` files with URL glob patterns. Captures from `github.com/anthropic/*` go to one file, `zenn.dev/*` to another, unmatched URLs to a default route
+- **Multi-agent fan-out** *(v0.9.0+)* — A single route can write to **multiple** context files at once: `CLAUDE.md` (Claude Code) + `.cursorrules` (Cursor) + `.windsurfrules` (Windsurf), etc. People juggling several AI coding agents in the same project no longer need duplicate routes — one capture, all agents updated
 - **claude.ai conversation capture** *(v0.4.0+)* — Capture your claude.ai brainstorm conversation in one click. Bypasses the 403-on-share-link issue and the manual copy-paste loop. Hits claude.ai's internal API to preserve thinking blocks, tool_use entries, and branch structure that DOM scraping would miss
 - **Artifact extraction & range selection** *(v0.5.0+)* — For claude.ai captures, choose **artifacts only** (extract just the code/documents Claude wrote as clean fenced code blocks, dropping the conversation) or **keep the last N messages** (trim a long planning thread to what matters). Artifacts are deduped by id so an updated artifact is captured at its final version, not every intermediate edit. When you're on a claude.ai chat, these are **toggleable right from the popup**
 - **Same conversation updates in place (no silos)** *(v0.5.0+)* — In MCP-store mode, re-capturing the same claude.ai conversation **overwrites the existing file instead of piling up new snapshots**. It's tracked by a stable id, so even if the conversation's title changes the store stays a single source of truth (stale artifact files are cleaned up too)
