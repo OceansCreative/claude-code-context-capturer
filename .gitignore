@@ -12,3 +12,6 @@ coverage/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 .claude/worktrees/
+
+# Ephemeral puppeteer verification scripts
+cccc-verify-*.mjs
