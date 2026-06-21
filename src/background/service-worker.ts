@@ -96,13 +96,13 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResp
         if (message.skipFutureWrites) {
           await saveOptions({ ...staged.options, previewBeforeWrite: false });
         }
-        await deliver(
+        const outcome = await deliver(
           message.editedMarkdown,
           staged.payload,
           staged.options,
           staged.tabId
         );
-        await notify('Captured ✓', 'success');
+        await notifyDelivery(outcome);
         await removeStagedCapture(message.stageId);
         sendResponse({ ok: true });
       } catch (err) {
@@ -179,8 +179,8 @@ async function requestCapture(
       return { type: 'CAPTURE_PENDING_PREVIEW', payload: response.payload };
     }
 
-    await deliver(finalMarkdown, response.payload, options, tabId);
-    await notify('Captured ✓', 'success');
+    const outcome = await deliver(finalMarkdown, response.payload, options, tabId);
+    await notifyDelivery(outcome);
 
     return { type: 'CAPTURE_RESULT', payload: response.payload };
   } catch (err) {
@@ -218,13 +218,19 @@ function renderFinalMarkdown(ctx: CapturedContext, options: UserOptions): string
   return output;
 }
 
+/** Outcome of a delivery: files that wrote but lapsed get reported so the
+ *  user sees a warning instead of an unqualified success. */
+interface DeliveryOutcome {
+  partialFailures?: { fileName: string; reason: string }[];
+}
+
 /** Send the rendered Markdown to the configured destination(s). */
 async function deliver(
   markdown: string,
   ctx: CapturedContext,
   options: UserOptions,
   _tabId: number
-): Promise<void> {
+): Promise<DeliveryOutcome> {
   if (options.defaultMode === 'clipboard' || options.defaultMode === 'both') {
     await writeToClipboardViaOffscreen(markdown);
   }
@@ -232,11 +238,31 @@ async function deliver(
     await appendToBuffer(ctx, markdown);
   }
   if (options.defaultMode === 'claude-md') {
-    await appendToClaudeMd(ctx, markdown);
+    return await appendToClaudeMd(ctx, markdown);
   }
   if (options.defaultMode === 'mcp-store') {
     await writeToMcpStore(ctx, markdown);
   }
+  return {};
+}
+
+/**
+ * Notify the result of a delivery. A fan-out route that wrote some files but
+ * not others (e.g. one target's permission lapsed) committed real data to the
+ * surviving files — so it's NOT a hard error — but flashing "Captured ✓" would
+ * hide that the other files silently went stale. Surface the lapsed file names
+ * with an error-level badge so the user knows to re-link them.
+ */
+async function notifyDelivery(outcome: DeliveryOutcome): Promise<void> {
+  if (outcome.partialFailures?.length) {
+    const names = outcome.partialFailures.map((f) => f.fileName).join(', ');
+    await notify(
+      `Captured, but not written to: ${names} (permission lapsed — re-link in options)`,
+      'error'
+    );
+    return;
+  }
+  await notify('Captured ✓', 'success');
 }
 
 /**
@@ -283,7 +309,7 @@ async function writeToMcpStore(
 async function appendToClaudeMd(
   ctx: CapturedContext,
   markdown: string
-): Promise<void> {
+): Promise<DeliveryOutcome> {
   const routes = await listRoutes();
   if (routes.length === 0) {
     throw new Error('no-route: No CLAUDE.md is linked. Configure routes in settings.');
@@ -309,6 +335,9 @@ async function appendToClaudeMd(
     const detail = result?.message ?? 'Unknown error';
     throw new Error(`${reason}: ${detail}`);
   }
+  return result.partialFailures?.length
+    ? { partialFailures: result.partialFailures }
+    : {};
 }
 
 /**

@@ -1,5 +1,6 @@
 import { getRoute, getMcpDir } from '@/shared/handle-store';
 import { buildAppendBlock } from '@/shared/file-appender';
+import { classifyAppendResult } from '@/shared/append-result';
 import { slugFileNamesToRemove } from '@/shared/artifact-file';
 import type {
   OffscreenAppendResult,
@@ -115,32 +116,7 @@ async function appendToRoute(
     }
   }
 
-  if (succeeded.length === 0) {
-    // Every handle failed — surface the first reason verbatim so the SW's
-    // error message includes something actionable. permission-denied gets
-    // priority (it's the most common and the popup has a targeted fix UI).
-    const permLapse = partialFailures.find((f) => f.reason.startsWith('permission lapsed'));
-    if (permLapse) {
-      return {
-        ok: false,
-        reason: 'permission-denied',
-        message: `All targets failed. ${permLapse.fileName}: ${permLapse.reason}`,
-      };
-    }
-    return {
-      ok: false,
-      reason: 'write-failed',
-      message: partialFailures
-        .map((f) => `${f.fileName}: ${f.reason}`)
-        .join(' · '),
-    };
-  }
-
-  return {
-    ok: true,
-    fileNames: succeeded,
-    ...(partialFailures.length > 0 ? { partialFailures } : {}),
-  };
+  return classifyAppendResult(succeeded, partialFailures);
 }
 
 /**
