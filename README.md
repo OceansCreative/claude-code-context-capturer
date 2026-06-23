@@ -1,3 +1,11 @@
+> ### 🚀 Claude Code Power Pack
+> The parallel workflow I run daily — an agent suite pre-wired with a `/ship` orchestrator and a one-command git-worktree bootstrap. Ready in 15 minutes.
+> **→ [Get the Power Pack ($29)](https://oceanscreative.lemonsqueezy.com/checkout/buy/145f2e53-a428-4b5e-b5a8-3cb4f7a740b0)**
+>
+> 並列開発ワークフローを実運用パックに。`/ship` オーケストレーター＋並列 worktree ブートストラップ同梱、15 分で導入。
+
+---
+
 # Claude Code Context Capturer
 
 > Capture web pages as Markdown and append them **directly to your project's `CLAUDE.md`**. Multi-project routing by URL pattern. Site-specific parsers for GitHub, Stack Overflow, Zenn, Qiita, MDN.
