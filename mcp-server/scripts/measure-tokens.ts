@@ -20,12 +20,14 @@
 
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { ALL_TOOLS, type ToolName } from '../src/profiles.js';
+import { ALL_TOOLS, PROFILES, type ToolName } from '../src/profiles.js';
 
 // We can't import the actual `server.registerTool` calls without starting the
 // server (and side-effecting on the contexts dir). Instead we mirror the
-// tool definitions here. KEEP IN SYNC with src/index.ts — divergence is
-// caught by the per-tool-character lower-bound assertion at the bottom.
+// tool definitions here. KEEP IN SYNC with src/index.ts BY HAND: the
+// `Record<ToolName, …>` typing guarantees the tool *set* stays aligned with
+// profiles.ts, but the description/schema text is a manual copy with nothing
+// enforcing it matches the live definitions.
 
 const FILTER_FIELDS = {
   parser: z
@@ -144,14 +146,6 @@ function serializedForToolList(name: string, def: { description: string; inputSc
   return JSON.stringify({ name, description: def.description, input_schema: schema });
 }
 
-const PROFILES: Record<string, readonly ToolName[]> = {
-  minimal: ['get_context'],
-  lean: ['get_context', 'list_contexts'],
-  search: ['get_context', 'search_contexts'],
-  discover: ['get_context', 'list_contexts', 'search_contexts'],
-  full: ALL_TOOLS,
-};
-
 interface Row {
   name: string;
   chars: number;
@@ -165,7 +159,10 @@ function measure(): { perTool: Row[]; perProfile: Array<{ name: string; chars: n
     perTool.push({ name, chars: serialized.length, tokens: tokensOf(serialized.length) });
   }
 
-  const perProfile = Object.entries(PROFILES).map(([name, tools]) => {
+  const perProfile = Object.entries(PROFILES)
+    // `default` is an alias of `full` — skip it so the table has no duplicate row.
+    .filter(([name]) => name !== 'default')
+    .map(([name, tools]) => {
     const chars = tools
       .map((t) => serializedForToolList(t, TOOL_DEFINITIONS[t]).length)
       .reduce((a, b) => a + b, 0);

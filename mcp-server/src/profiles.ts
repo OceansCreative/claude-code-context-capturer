@@ -30,7 +30,7 @@ export const ALL_TOOLS: readonly ToolName[] = [
   'delete_context',
 ] as const;
 
-const PROFILES: Record<string, readonly ToolName[]> = {
+export const PROFILES: Record<string, readonly ToolName[]> = {
   /** Just fetch by slug — for when the agent already knows what to read (e.g. from CLAUDE.md). */
   minimal: ['get_context'],
   /** List + get. Browse-then-fetch. Smallest useful profile for general use. */

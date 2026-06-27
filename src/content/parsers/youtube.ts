@@ -312,9 +312,30 @@ interface Json3Response {
   }>;
 }
 
+const TRANSCRIPT_FETCH_TIMEOUT_MS = 15_000;
+
 async function fetchTranscript(baseUrl: string): Promise<TranscriptSegment[]> {
   const url = baseUrl.includes('fmt=') ? baseUrl : `${baseUrl}&fmt=json3`;
-  const res = await fetch(url, { credentials: 'include' });
+  // AbortController + setTimeout rather than AbortSignal.timeout(): the latter
+  // isn't available in every runtime (notably the test environment), while
+  // AbortController is universal. Without a timeout a hung connection leaves
+  // the popup spinning forever.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TRANSCRIPT_FETCH_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(url, { credentials: 'include', signal: controller.signal });
+  } catch (err) {
+    if (err instanceof DOMException && (err.name === 'AbortError' || err.name === 'TimeoutError')) {
+      throw new Error(
+        `YouTube transcript fetch timed out after ${TRANSCRIPT_FETCH_TIMEOUT_MS / 1000}s. ` +
+          'Retry, or the network/region may be blocking timedtext.'
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) {
     throw new Error(`YouTube transcript fetch failed: ${res.status} ${res.statusText}`);
   }

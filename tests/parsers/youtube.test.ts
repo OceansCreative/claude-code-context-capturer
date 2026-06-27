@@ -287,4 +287,71 @@ describe('parseYoutube (integration)', () => {
     });
     await expect(parseYoutube()).rejects.toThrow(/429/);
   });
+
+  it('throws a clear error when the transcript fetch times out', async () => {
+    injectPlayerResponse(MIN_PAYLOAD);
+    fetchMock.mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
+    await expect(parseYoutube()).rejects.toThrow(/timed out/i);
+  });
+
+  it('end-to-end slots the transcript under chapter sub-headings', async () => {
+    injectPlayerResponse(PAYLOAD_WITH_CHAPTERS);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        events: [
+          { tStartMs: 0, segs: [{ utf8: 'intro line' }] },
+          { tStartMs: 40_000, segs: [{ utf8: 'main line' }] },
+        ],
+      }),
+    });
+
+    const ctx = await parseYoutube();
+    const introIdx = ctx.body.indexOf('### [00:00] Intro');
+    const mainIdx = ctx.body.indexOf('### [00:30] Main Topic');
+    expect(introIdx).toBeGreaterThanOrEqual(0);
+    expect(mainIdx).toBeGreaterThan(introIdx);
+    // The 40s line must land under "Main Topic", not "Intro".
+    expect(ctx.body.indexOf('main line')).toBeGreaterThan(mainIdx);
+  });
+
+  it('selects auto-generated English through the full path when no manual track exists', async () => {
+    injectPlayerResponse({
+      ...MIN_PAYLOAD,
+      captions: {
+        playerCaptionsTracklistRenderer: {
+          captionTracks: [
+            {
+              baseUrl: `https://youtube.com/api/timedtext?lang=ja&v=${VID}`,
+              languageCode: 'ja',
+              name: { simpleText: 'Japanese' },
+            },
+            {
+              baseUrl: `https://youtube.com/api/timedtext?lang=en&v=${VID}`,
+              languageCode: 'en',
+              vssId: 'a.en',
+              kind: 'asr',
+              name: { simpleText: 'English (auto-generated)' },
+            },
+          ],
+        },
+      },
+    });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ events: [{ tStartMs: 0, segs: [{ utf8: 'hi' }] }] }),
+    });
+
+    const ctx = await parseYoutube();
+    expect(ctx.tags).toContain('captions:auto');
+    expect(ctx.tags).toContain('lang:en');
+    expect(ctx.body).toContain('captions: auto-generated');
+    // It must fetch the English auto track, not the Japanese one.
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('lang=en'),
+      expect.anything()
+    );
+  });
 });
