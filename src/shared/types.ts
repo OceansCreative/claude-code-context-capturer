@@ -69,6 +69,7 @@ export type ParserName =
   | 'youtube'
   | 'reddit'
   | 'hackernews'
+  | 'x'
   | 'generic'
   | 'selection';
 
