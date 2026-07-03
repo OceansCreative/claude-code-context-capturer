@@ -32,7 +32,8 @@ What it does:
 • Preview before write (v0.6.0+) — review the captured Markdown in a window, trim cruft like nav menus or sidebar leftovers, then confirm. Optional, toggleable from a "skip next time" checkbox
 • MCP server for on-demand context (v0.5.0+) — save captures to a directory and the bundled MCP server hands them to Claude Code only when it asks for them, keeping CLAUDE.md small. Tools: get_context / list_contexts / search_contexts / stats_contexts, with tag/date filtering. v0.7.0 added the CCC_MCP_TOOLS env var to trim the tool set and save ~666 tokens/turn vs the full set
 • Reddit thread capture (v1.1.0+) — captures a post plus its comment tree via Reddit's JSON API: selftext and comments as native Markdown, nested replies as blockquotes, deleted/removed comments skipped, capped at 100 comments with a truncation note
-• Site-specific parsers for GitHub, Stack Overflow, Zenn, Qiita, MDN
+• Hacker News thread capture (v1.1.0+) — captures the story (title, link, points, author, Ask HN text) and the comment tree with nesting preserved as quotes; [dead]/[flagged] skipped, capped at the first 100 comments
+• Site-specific parsers for GitHub, Stack Overflow, Hacker News, Zenn, Qiita, MDN
 • Generic parser (Mozilla Readability) for everything else
 • Selection mode: capture just what you've highlighted
 • Buffer mode: stack captures in extension storage for later export
@@ -75,7 +76,8 @@ Claude Code Context Capturer は、開いている Web ページを Markdown に
 • 書き込み前プレビュー (v0.6.0+) — 別ウィンドウでキャプチャした Markdown を確認し、ナビゲーションメニュー / サイドバー残骸など不要箇所を削ってから confirm。「次回スキップ」チェックで一時無効化可能
 • MCP サーバーによるオンデマンド供給 (v0.5.0+) — キャプチャを専用ディレクトリへ 1 件 1 ファイルで保存し、付属の MCP サーバーが Claude Code から要求された時だけ渡します。CLAUDE.md を肥大化させずに参照可能。tools: get_context / list_contexts / search_contexts / stats_contexts、タグ・日付フィルタ対応。v0.7.0 で CCC_MCP_TOOLS env var が追加され、ツールセットを絞ってターンあたり〜666 トークン削減可能
 • Reddit スレッドキャプチャ (v1.1.0+) — post とコメントツリーを Reddit の JSON API 経由で取得。selftext / コメントは Markdown のまま、ネストは blockquote で表現、deleted / removed はスキップ、最大 100 コメントで truncation を明記
-• GitHub・Stack Overflow・Zenn・Qiita・MDN のサイト別パーサー
+• Hacker News スレッドキャプチャ (v1.1.0+) — item ページのストーリー(タイトル / リンク / points / 投稿者 / Ask HN 本文)とコメントツリーをネスト構造(引用)を保って抽出。[dead] / [flagged] はスキップ、最初の 100 コメントでキャップ
+• GitHub・Stack Overflow・Hacker News・Zenn・Qiita・MDN のサイト別パーサー
 • その他のサイトは Mozilla Readability で本文抽出
 • 選択範囲モード(テキスト選択時はその部分のみ)
 • バッファモード(複数キャプチャを溜めて一括エクスポート)

@@ -68,6 +68,7 @@ export type ParserName =
   | 'claude-ai-artifact'
   | 'youtube'
   | 'reddit'
+  | 'hackernews'
   | 'generic'
   | 'selection';
 
