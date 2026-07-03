@@ -6,6 +6,14 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.0.0 — 1.0
+
+- **1.0 milestone.** Preceded by a multi-agent pre-v1.0 code audit that surfaced no blockers. No new user-facing features over v0.9.0 — this release hardens the multi-agent fan-out reliability and the YouTube parser, and closes audit nice-to-haves.
+- **Fix:** Multi-agent fan-out partial-failure signal is now surfaced to the user. When one target file in a fan-out route succeeds and another lapses (e.g. an expired permission), the outcome is no longer silently swallowed as a green checkmark — the partial failure is reported. Added unit coverage for the fan-out outcome classification and for the pre-v0.9.0 handle-shape migration.
+- **Polish:** YouTube transcript fetch now enforces a 15s timeout so a hung request can't stall a capture. Added YouTube integration tests (chapter handling + auto-English caption selection). `profiles.ts` is now the single source of `PROFILES`, and the `measure-tokens` comment was corrected.
+- Permissions unchanged. 129/129 unit tests pass.
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.0.0) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v0.9.0...v1.0.0)
+
 ## v0.9.0 — Multi-agent fan-out (Cursor / Windsurf / Aider / Claude Code)
 
 - **New:** A single context-file route can now write to **multiple** target files at once. People juggling Claude Code + Cursor (or Windsurf, or Aider) in the same project no longer need duplicate routes — link your `CLAUDE.md`, then click "+ Link another file" to add `.cursorrules` / `.windsurfrules` / etc. One capture lands in all targets.
