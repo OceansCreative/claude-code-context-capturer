@@ -31,7 +31,8 @@ What it does:
 • YouTube transcript capture (v0.8.0+) — for tutorials, talks, and conference recordings: pulls the transcript (manual or auto-generated) plus title / channel / chapters / duration. Chapters become sub-headings with [mm:ss] timestamps
 • Preview before write (v0.6.0+) — review the captured Markdown in a window, trim cruft like nav menus or sidebar leftovers, then confirm. Optional, toggleable from a "skip next time" checkbox
 • MCP server for on-demand context (v0.5.0+) — save captures to a directory and the bundled MCP server hands them to Claude Code only when it asks for them, keeping CLAUDE.md small. Tools: get_context / list_contexts / search_contexts / stats_contexts, with tag/date filtering. v0.7.0 added the CCC_MCP_TOOLS env var to trim the tool set and save ~666 tokens/turn vs the full set
-• Site-specific parsers for GitHub, Stack Overflow, Zenn, Qiita, MDN
+• Hacker News thread capture (v1.1.0+) — captures the story (title, link, points, author, Ask HN text) and the comment tree with nesting preserved as quotes; [dead]/[flagged] skipped, capped at the first 100 comments
+• Site-specific parsers for GitHub, Stack Overflow, Hacker News, Zenn, Qiita, MDN
 • Generic parser (Mozilla Readability) for everything else
 • Selection mode: capture just what you've highlighted
 • Buffer mode: stack captures in extension storage for later export
@@ -73,7 +74,8 @@ Claude Code Context Capturer は、開いている Web ページを Markdown に
 • YouTube transcript キャプチャ (v0.8.0+) — チュートリアル動画 / 講演 / カンファレンス録画から transcript(手動字幕 / 自動字幕)とタイトル / チャンネル / chapters / 長さを抽出。chapter があれば [mm:ss] タイムスタンプ付き sub-heading として整形
 • 書き込み前プレビュー (v0.6.0+) — 別ウィンドウでキャプチャした Markdown を確認し、ナビゲーションメニュー / サイドバー残骸など不要箇所を削ってから confirm。「次回スキップ」チェックで一時無効化可能
 • MCP サーバーによるオンデマンド供給 (v0.5.0+) — キャプチャを専用ディレクトリへ 1 件 1 ファイルで保存し、付属の MCP サーバーが Claude Code から要求された時だけ渡します。CLAUDE.md を肥大化させずに参照可能。tools: get_context / list_contexts / search_contexts / stats_contexts、タグ・日付フィルタ対応。v0.7.0 で CCC_MCP_TOOLS env var が追加され、ツールセットを絞ってターンあたり〜666 トークン削減可能
-• GitHub・Stack Overflow・Zenn・Qiita・MDN のサイト別パーサー
+• Hacker News スレッドキャプチャ (v1.1.0+) — item ページのストーリー(タイトル / リンク / points / 投稿者 / Ask HN 本文)とコメントツリーをネスト構造(引用)を保って抽出。[dead] / [flagged] はスキップ、最初の 100 コメントでキャップ
+• GitHub・Stack Overflow・Hacker News・Zenn・Qiita・MDN のサイト別パーサー
 • その他のサイトは Mozilla Readability で本文抽出
 • 選択範囲モード(テキスト選択時はその部分のみ)
 • バッファモード(複数キャプチャを溜めて一括エクスポート)
