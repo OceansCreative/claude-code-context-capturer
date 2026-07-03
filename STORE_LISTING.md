@@ -113,16 +113,18 @@ English (primary), Japanese (secondary)
 ### Icon (already in repo)
 - `public/icons/icon-128.png` — 128×128 PNG ✓ included
 
-### Screenshots (need to be created)
+### Screenshots (in `docs/screenshots/`)
 
 The Chrome Web Store requires at least 1 and up to 5 screenshots, **1280×800 or 640×400 px**.
 
-Suggested screenshots:
-1. The options page showing the routes table (key differentiator vs other clippers)
-2. The popup with "Capture page" and "Capture selection" buttons
-3. A captured GitHub Issue rendered as Markdown inside CLAUDE.md (the killer feature)
-4. The settings page with options visible
-5. The buffer view showing multiple captures stacked
+Available (1280×800, ready to upload):
+1. `05-fanout-routes-1280x800.png` — **multi-agent fan-out route** linking CLAUDE.md + .cursorrules + .windsurfrules with per-file permission badges (the v0.9.0+ differentiator — lead with this)
+2. `01-options-routes-1280x800.png` — the options page routes table
+3. `02-popup.png` — the popup with "Capture page" / "Capture selection"
+4. `03-hero.png` — hero composition
+5. `04-claude-md-rendered.png` — a captured page rendered as Markdown inside CLAUDE.md
+
+Still worth creating: the preview-before-write window, and the buffer view with multiple captures stacked.
 
 ### Promotional tile (optional but recommended)
 - **Small promo tile**: 440×280 PNG
