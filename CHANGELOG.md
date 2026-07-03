@@ -6,6 +6,15 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.1.0 — Reddit + Hacker News parsers
+
+- **New:** Reddit site-specific parser. Captures a Reddit post + its comment tree via Reddit's JSON endpoint (`.json?raw_json=1`) — no scraping of the unstable shreddit DOM. Selftext and comment bodies pass through as native Markdown, nested replies render as blockquotes, deleted/removed comments are skipped (surviving children promoted), `more` stubs are tolerated with a truncation note. 100-comment cap, 15s fetch timeout, friendly 429 (rate-limit) and 403 (private/quarantined) errors. Stable `dedupeKey: reddit:<postId>` so re-capturing updates in place.
+- **New:** Hacker News site-specific parser. Captures an HN item page — story (title / external link or Ask HN text / points / author) plus the full comment tree. Nesting is reconstructed from the `td.ind[indent]` attribute (with legacy spacer-width fallback) and rendered as nested blockquotes (depth capped at 10). `[dead]`/`[flagged]` comments skipped via triple detection, 100-comment cap with truncation note. Stable `dedupeKey: hn:<itemId>`.
+- Site-specific parsers now cover **GitHub / Stack Overflow / Zenn / Qiita / MDN / YouTube / Reddit / Hacker News / claude.ai** — the major developer-research sources.
+- Chore: vitest now excludes `.claude/` worktree checkouts (fixes test-count double-counting).
+- Permissions unchanged — the existing `<all_urls>` host permission covers the same-origin fetches. 166/166 unit tests pass (+37 vs v1.0.0).
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.1.0) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v1.0.0...v1.1.0)
+
 ## v1.0.0 — 1.0
 
 - **1.0 milestone.** Preceded by a multi-agent pre-v1.0 code audit that surfaced no blockers. No new user-facing features over v0.9.0 — this release hardens the multi-agent fan-out reliability and the YouTube parser, and closes audit nice-to-haves.
