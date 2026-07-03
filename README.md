@@ -8,7 +8,7 @@
 
 # Claude Code Context Capturer
 
-> Capture web pages as Markdown and append them **directly to your project's context files** — `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, all at once. Multi-project routing by URL pattern. Site-specific parsers for GitHub, Stack Overflow, Zenn, Qiita, MDN, YouTube, and claude.ai conversations.
+> Capture web pages as Markdown and append them **directly to your project's context files** — `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, all at once. Multi-project routing by URL pattern. Site-specific parsers for GitHub, Stack Overflow, Zenn, Qiita, MDN, YouTube, Reddit, and claude.ai conversations.
 
 ![hero](docs/screenshots/03-hero.png)
 
@@ -60,6 +60,7 @@ I see the same.
   - Qiita
   - MDN Web Docs
   - **YouTube** *(v0.8.0+)* — transcript（manual / auto-generated）と動画メタを抽出。chapter があれば見出しでセグメント分割、なければ `[mm:ss]` タイムスタンプ付き本文
+  - **Reddit** *(v1.1.0+)* — post + コメントツリーを JSON API 経由で抽出（不安定な shreddit DOM はスクレイプしない）。selftext / コメント本文は Markdown そのまま、ネストは blockquote で表現、deleted / removed はスキップ、最大 100 コメントで truncation を明記
   - その他のサイトは Mozilla Readability で本文抽出
 - **メタ情報の埋め込み**：URL・タイトル・取得日時を YAML frontmatter で付与
 - **CLAUDE.md への直書き** *(v0.2.0+)*：プロジェクトの `CLAUDE.md` を一度ピックすれば、以降のキャプチャは File System Access API 経由で自動 append。コピペ不要
@@ -97,7 +98,7 @@ I see the same.
 | クリップボードに出力 | ✓ | ✓ | ✓ | ✓ |
 | **プロジェクトの実ファイル `CLAUDE.md` に直接書き込み** | ✗ | ✗（独自 Vault） | ✗ | **✓** |
 | **URL パターンで複数ファイルに振り分け** | ✗ | ✗ | ✗ | **✓** |
-| GitHub / Stack Overflow / Zenn / Qiita / MDN / YouTube サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
+| GitHub / Stack Overflow / Zenn / Qiita / MDN / YouTube / Reddit サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
 | **claude.ai 会話キャプチャ（thinking / tool_use / branch 保持）** | ✗ | ✗ | ✗ | **✓** |
 | 100% ローカル処理・完全 OSS | ✓ | ✗（SaaS） | ✓ | ✓ |
 
@@ -256,7 +257,7 @@ Honestly, several Web→Markdown extensions already exist: **[LLMFeeder](https:/
 | Clipboard output | ✓ | ✓ | ✓ | ✓ |
 | **Direct write to your project's `CLAUDE.md`** | ✗ | ✗ (own vault) | ✗ | **✓** |
 | **URL-pattern routing to multiple files** | ✗ | ✗ | ✗ | **✓** |
-| Site-specific parsers (GitHub / SO / Zenn / Qiita / MDN / YouTube) | ✗ | partial | ✗ | **✓** |
+| Site-specific parsers (GitHub / SO / Zenn / Qiita / MDN / YouTube / Reddit) | ✗ | partial | ✗ | **✓** |
 | **claude.ai conversation capture (thinking / tool_use / branches preserved)** | ✗ | ✗ | ✗ | **✓** |
 | 100% local, fully OSS | ✓ | ✗ (SaaS) | ✓ | ✓ |
 
@@ -267,6 +268,7 @@ In short: a clipper purpose-built for AI agent context files. If you want a gene
 - **One-click capture** — Toolbar icon or keyboard shortcut
 - **Selection mode** — Capture only what you've selected
 - **Site-specific parsers** for GitHub, Stack Overflow, Zenn, Qiita, MDN, and **YouTube** *(v0.8.0+)* — pulls the transcript + chapters + metadata, not just the title
+- **Reddit thread capture** *(v1.1.0+)* — captures the post + comment tree via Reddit's JSON API (no scraping of the unstable shreddit DOM). Selftext and comment bodies pass through as native Markdown, replies nest as blockquotes, deleted/removed comments are skipped, and megathreads are capped at 100 comments with an explicit truncation note
 - **YAML frontmatter** with URL, title, captured_at, author, tags
 - **Direct CLAUDE.md write** *(v0.2.0+)* — Link a `CLAUDE.md` once via the File System Access API; subsequent captures append directly, no copy/paste
 - **Multi-project routing** *(v0.3.0+)* — Link multiple `CLAUDE.md` files with URL glob patterns. Captures from `github.com/anthropic/*` go to one file, `zenn.dev/*` to another, unmatched URLs to a default route

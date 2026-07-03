@@ -5,6 +5,7 @@ import { canHandleQiita, parseQiita } from './qiita';
 import { canHandleMdn, parseMdn } from './mdn';
 import { canHandleClaudeAi, parseClaudeAi } from './claude-ai';
 import { canHandleYoutube, parseYoutube } from './youtube';
+import { canHandleReddit, parseReddit } from './reddit';
 import { parseGenericPage } from './generic';
 import type { CaptureOptions, CapturedContext } from '@/shared/types';
 
@@ -21,6 +22,9 @@ export async function dispatchPageParser(
 ): Promise<CapturedContext> {
   if (canHandleClaudeAi()) return parseClaudeAi(options);
   if (canHandleYoutube()) return parseYoutube(options);
+  // Reddit only claims /r/<sub>/comments/<id> paths, so it's as specific as
+  // the claude-ai/youtube checks above — listing pages fall through to generic.
+  if (canHandleReddit()) return parseReddit(options);
   if (canHandleGitHub()) return parseGitHub();
   if (canHandleStackOverflow()) return parseStackOverflow();
   if (canHandleZenn()) return parseZenn();
