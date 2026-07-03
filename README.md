@@ -8,7 +8,7 @@
 
 # Claude Code Context Capturer
 
-> Capture web pages as Markdown and append them **directly to your project's `CLAUDE.md`**. Multi-project routing by URL pattern. Site-specific parsers for GitHub, Stack Overflow, Zenn, Qiita, MDN.
+> Capture web pages as Markdown and append them **directly to your project's context files** — `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, all at once. Multi-project routing by URL pattern. Site-specific parsers for GitHub, Stack Overflow, Zenn, Qiita, MDN, YouTube, and claude.ai conversations.
 
 ![hero](docs/screenshots/03-hero.png)
 
@@ -64,11 +64,12 @@ I see the same.
 - **メタ情報の埋め込み**：URL・タイトル・取得日時を YAML frontmatter で付与
 - **CLAUDE.md への直書き** *(v0.2.0+)*：プロジェクトの `CLAUDE.md` を一度ピックすれば、以降のキャプチャは File System Access API 経由で自動 append。コピペ不要
 - **マルチプロジェクト振り分け** *(v0.3.0+)*：URL パターン（glob）で複数の CLAUDE.md を使い分け。例：`github.com/anthropic/*` → anthropic 用、`zenn.dev/*` → 個人メモ、無マッチは default ルート
-- **マルチエージェント同時書き込み** *(v0.9.0+)*：1 つのルートが `CLAUDE.md`（Claude Code）+ `.cursorrules`（Cursor）+ `.windsurfrules`（Windsurf）など複数のコンテキストファイルへ**同時 append**。AI エージェントを並行して使ってる人が単一のキャプチャで全部更新できる
+- **マルチエージェント同時書き込み** *(v0.9.0+)*：1 つのルートが `CLAUDE.md`（Claude Code）+ `.cursorrules`（Cursor）+ `.windsurfrules`（Windsurf）など複数のコンテキストファイルへ**同時 append**。AI エージェントを並行して使ってる人が単一のキャプチャで全部更新できる。一部のファイルだけ書き込みに失敗した場合（permission 失効など）は成功扱いにせずきちんと通知します *(v1.0.0+)*
+- **書き込み前プレビュー** *(v0.6.0+)*：キャプチャした Markdown を別ウィンドウで確認・編集してから書き込み。ナビメニューやサイドバーの残骸をその場で削れます。「次回スキップ」チェックで一時的に無効化可能
 - **claude.ai 会話のキャプチャ** *(v0.4.0+)*：claude.ai でブレストした会話をワンクリックで CLAUDE.md に流し込み。share リンクの 403 問題、手コピペの労力を解消。内部 API を叩いて thinking blocks・tool_use・branch 構造まで保持
 - **アーティファクト抽出 & 範囲選択** *(v0.5.0+)*：claude.ai キャプチャで「**アーティファクトだけ**」（Claude が書いたコード／ドキュメントを整形済みコードブロックで抽出、会話は捨てる）や「**直近 N 件のみ**」を選択可能。長い設計会話から必要な部分だけを取り込めます。アーティファクトは同一 ID の更新を最新版に集約。claude.ai のチャットを開いているときは**ポップアップから直接トグル**できます
 - **同一会話は上書き更新（siloを作らない）** *(v0.5.0+)*：MCP ストアモードで同じ claude.ai 会話を再キャプチャすると、**新しいスナップショットを増やさず既存ファイルを上書き**します。会話タイトルが変わっても安定 ID で追跡するので、ストアは常に single source of truth に保たれます（古いアーティファクトファイルも掃除）
-- **MCP 経由でオンデマンド参照** *(v0.5.0+)*：キャプチャを `CLAUDE.md` に追記する代わりに、専用ディレクトリへ 1 件 1 ファイルで保存し、付属の [MCP サーバ](./mcp-server) が Claude Code に**必要なときだけ**渡します。Anthropic 公式の「`CLAUDE.md` は小さく保て（肥大化すると指示が無視される）」ガイドと整合し、コンテキストを汚しません。`list_contexts` / `search_contexts` / `get_context` で検索・取得できます。→ [セットアップ](./mcp-server/README.md)
+- **MCP 経由でオンデマンド参照** *(v0.5.0+)*：キャプチャを `CLAUDE.md` に追記する代わりに、専用ディレクトリへ 1 件 1 ファイルで保存し、付属の [MCP サーバ](./mcp-server) が Claude Code に**必要なときだけ**渡します。Anthropic 公式の「`CLAUDE.md` は小さく保て（肥大化すると指示が無視される）」ガイドと整合し、コンテキストを汚しません。`list_contexts` / `search_contexts` / `get_context` で検索・取得できます。v0.7.0+ は `CCC_MCP_TOOLS` 環境変数でツールセットを絞れます（`lean` プロファイルでターンあたり約 52%、`minimal` で約 82% のツール定義トークン削減）。→ [セットアップ](./mcp-server/README.md)
 - **キャプチャバッファ**：複数ページをまとめて溜めて、後から一括エクスポート
 - **キーボードショートカット**：
   - `Ctrl+Shift+L`（macOS: `Cmd+Shift+L`）：ページ全体
@@ -96,7 +97,7 @@ I see the same.
 | クリップボードに出力 | ✓ | ✓ | ✓ | ✓ |
 | **プロジェクトの実ファイル `CLAUDE.md` に直接書き込み** | ✗ | ✗（独自 Vault） | ✗ | **✓** |
 | **URL パターンで複数ファイルに振り分け** | ✗ | ✗ | ✗ | **✓** |
-| GitHub / Stack Overflow / Zenn / Qiita / MDN サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
+| GitHub / Stack Overflow / Zenn / Qiita / MDN / YouTube サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
 | **claude.ai 会話キャプチャ（thinking / tool_use / branch 保持）** | ✗ | ✗ | ✗ | **✓** |
 | 100% ローカル処理・完全 OSS | ✓ | ✗（SaaS） | ✓ | ✓ |
 
@@ -106,7 +107,7 @@ I see the same.
 
 ### Chrome ウェブストア
 
-現在審査中です。公開までは [最新リリース](https://github.com/OceansCreative/claude-code-context-capturer/releases/latest) の zip をダウンロードするか、下記「開発版を直接インストール」の手順をご利用ください。
+[Chrome ウェブストアで公開中](https://chromewebstore.google.com/detail/claude-code-context-captu/bnhoinbchkcamklfcpnjplljjodiikfo)です。ストア版の更新は審査待ちで数日遅れることがあります。最新版をすぐ使いたい場合は [最新リリース](https://github.com/OceansCreative/claude-code-context-capturer/releases/latest) の zip をダウンロードするか、下記「開発版を直接インストール」の手順をご利用ください。
 
 ### 開発版を直接インストール
 
@@ -154,7 +155,7 @@ npm run build
 | Wrap output in fenced code block | コードブロックで囲む（チャット直貼り用） |
 | Maximum body length | 本文の最大文字数（0 = 無制限） |
 | Locale | en / ja |
-| CLAUDE.md routes | 複数の `CLAUDE.md` を URL パターンで振り分け（v0.3.0+） |
+| Context file routes | 複数のコンテキストファイルを URL パターンで振り分け（v0.3.0+）。1 ルートに複数ファイルをリンクして同時書き込みも可能（v0.9.0+） |
 
 ## 🛠️ 開発
 
@@ -255,7 +256,7 @@ Honestly, several Web→Markdown extensions already exist: **[LLMFeeder](https:/
 | Clipboard output | ✓ | ✓ | ✓ | ✓ |
 | **Direct write to your project's `CLAUDE.md`** | ✗ | ✗ (own vault) | ✗ | **✓** |
 | **URL-pattern routing to multiple files** | ✗ | ✗ | ✗ | **✓** |
-| Site-specific parsers (GitHub / SO / Zenn / Qiita / MDN) | ✗ | partial | ✗ | **✓** |
+| Site-specific parsers (GitHub / SO / Zenn / Qiita / MDN / YouTube) | ✗ | partial | ✗ | **✓** |
 | **claude.ai conversation capture (thinking / tool_use / branches preserved)** | ✗ | ✗ | ✗ | **✓** |
 | 100% local, fully OSS | ✓ | ✗ (SaaS) | ✓ | ✓ |
 
@@ -269,11 +270,12 @@ In short: a clipper purpose-built for AI agent context files. If you want a gene
 - **YAML frontmatter** with URL, title, captured_at, author, tags
 - **Direct CLAUDE.md write** *(v0.2.0+)* — Link a `CLAUDE.md` once via the File System Access API; subsequent captures append directly, no copy/paste
 - **Multi-project routing** *(v0.3.0+)* — Link multiple `CLAUDE.md` files with URL glob patterns. Captures from `github.com/anthropic/*` go to one file, `zenn.dev/*` to another, unmatched URLs to a default route
-- **Multi-agent fan-out** *(v0.9.0+)* — A single route can write to **multiple** context files at once: `CLAUDE.md` (Claude Code) + `.cursorrules` (Cursor) + `.windsurfrules` (Windsurf), etc. People juggling several AI coding agents in the same project no longer need duplicate routes — one capture, all agents updated
+- **Multi-agent fan-out** *(v0.9.0+)* — A single route can write to **multiple** context files at once: `CLAUDE.md` (Claude Code) + `.cursorrules` (Cursor) + `.windsurfrules` (Windsurf), etc. People juggling several AI coding agents in the same project no longer need duplicate routes — one capture, all agents updated. If some target files fail while others succeed (e.g. an expired permission), the partial failure is surfaced instead of reported as success *(v1.0.0+)*
+- **Preview before write** *(v0.6.0+)* — Review and edit the captured Markdown in a preview window before it lands anywhere — trim nav menus, sidebar leftovers, and other cruft, then confirm. Toggleable in Options and via a "skip next time" checkbox on the preview itself
 - **claude.ai conversation capture** *(v0.4.0+)* — Capture your claude.ai brainstorm conversation in one click. Bypasses the 403-on-share-link issue and the manual copy-paste loop. Hits claude.ai's internal API to preserve thinking blocks, tool_use entries, and branch structure that DOM scraping would miss
 - **Artifact extraction & range selection** *(v0.5.0+)* — For claude.ai captures, choose **artifacts only** (extract just the code/documents Claude wrote as clean fenced code blocks, dropping the conversation) or **keep the last N messages** (trim a long planning thread to what matters). Artifacts are deduped by id so an updated artifact is captured at its final version, not every intermediate edit. When you're on a claude.ai chat, these are **toggleable right from the popup**
 - **Same conversation updates in place (no silos)** *(v0.5.0+)* — In MCP-store mode, re-capturing the same claude.ai conversation **overwrites the existing file instead of piling up new snapshots**. It's tracked by a stable id, so even if the conversation's title changes the store stays a single source of truth (stale artifact files are cleaned up too)
-- **On-demand access via MCP** *(v0.5.0+)* — Instead of appending to `CLAUDE.md`, save each capture as a standalone file in a directory, and let the bundled [MCP server](./mcp-server) hand them to Claude Code **only when it asks**. This aligns with Anthropic's own guidance to keep `CLAUDE.md` small (bloated context files make Claude ignore your instructions) — your research stays available without polluting context. Searchable via `list_contexts` / `search_contexts` / `get_context`. → [Setup](./mcp-server/README.md)
+- **On-demand access via MCP** *(v0.5.0+)* — Instead of appending to `CLAUDE.md`, save each capture as a standalone file in a directory, and let the bundled [MCP server](./mcp-server) hand them to Claude Code **only when it asks**. This aligns with Anthropic's own guidance to keep `CLAUDE.md` small (bloated context files make Claude ignore your instructions) — your research stays available without polluting context. Searchable via `list_contexts` / `search_contexts` / `get_context`. Since v0.7.0, the `CCC_MCP_TOOLS` env var trims the exposed tool set — the `lean` profile saves ~52% of the per-turn tool-definition token cost, `minimal` ~82%. → [Setup](./mcp-server/README.md)
 - **Buffer mode** — Stack multiple captures and export all at once
 - **Keyboard shortcuts**:
   - `Ctrl+Shift+L` (Cmd+Shift+L on macOS) — capture page
@@ -284,7 +286,7 @@ In short: a clipper purpose-built for AI agent context files. If you want a gene
 
 ### Chrome Web Store
 
-Currently in review. Until it's live, download the zip from the [latest release](https://github.com/OceansCreative/claude-code-context-capturer/releases/latest) or follow the "Manual install" steps below.
+[Live on the Chrome Web Store](https://chromewebstore.google.com/detail/claude-code-context-captu/bnhoinbchkcamklfcpnjplljjodiikfo). Store updates can lag a few days behind releases while in review; to get the newest version immediately, download the zip from the [latest release](https://github.com/OceansCreative/claude-code-context-capturer/releases/latest) or follow the "Manual install" steps below.
 
 ### Manual install
 

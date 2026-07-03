@@ -55,6 +55,9 @@
     "markdown",
     "ai",
     "context",
+    "mcp",
+    "youtube",
+    "multi-agent",
     "manifest-v3",
     "file-system-access"
   ],

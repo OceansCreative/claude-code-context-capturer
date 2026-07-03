@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: June 3, 2026
+Last updated: July 3, 2026
 
 ## Overview
 
@@ -17,7 +17,7 @@ The extension does not collect, transmit, sell, or share any of the following:
 - Usage analytics or telemetry
 - Cookies or tracking identifiers
 
-The extension itself does not communicate with any external server. The only outbound network traffic happens **inside the page you are capturing**, and only when you explicitly trigger a capture — see "claude.ai conversation capture" below.
+The extension itself does not communicate with any external server. The only outbound network traffic happens **inside the page you are capturing**, and only when you explicitly trigger a capture — see "claude.ai conversation capture" and "YouTube transcript capture" below.
 
 ## Data we DO process locally
 
@@ -29,7 +29,7 @@ The extension processes the following on your device only:
 | Your selected text (if you use "Capture selection") | Convert it to Markdown for you | Memory only — discarded after the operation |
 | The Markdown output | Place it on your system clipboard | System clipboard (managed by your OS) |
 | Buffered captures (if you opt into "Append to buffer" mode) | Let you export multiple captures together later | `chrome.storage.local` on your device |
-| Linked CLAUDE.md file handles (if you opt into "Append to linked CLAUDE.md file" mode, v0.2.0+) | Persist the FileSystemFileHandle the user picked so subsequent captures can append to the same file | `IndexedDB` on your device |
+| Linked context-file handles (if you opt into "Append to linked CLAUDE.md file" mode, v0.2.0+; a route can link multiple files such as `.cursorrules` / `.windsurfrules`, v0.9.0+) | Persist the FileSystemFileHandle(s) the user picked so subsequent captures can append to the same file(s) | `IndexedDB` on your device |
 | URL routing rules (v0.3.0+) | Route different sites to different `CLAUDE.md` files | `IndexedDB` on your device |
 | MCP captures directory handle and stored capture files (if you opt into the MCP store mode, v0.5.0+) | Persist captures as individual Markdown files that the bundled MCP server can hand to Claude Code on demand; dedupe keys let re-captures overwrite the right file | `FileSystemDirectoryHandle` in `IndexedDB`; capture files in the directory you picked, on your disk |
 | Your settings (frontmatter on/off, locale, default mode, etc.) | Persist your preferences | `chrome.storage.sync` on your device, optionally synced via your Chrome account |
@@ -46,6 +46,16 @@ When you capture a conversation on `claude.ai/chat/<id>`:
 - The extension never transmits your conversation to anywhere other than the destinations you have configured (clipboard, in-extension buffer on your device, or your own linked `CLAUDE.md` file on your disk)
 
 You can verify this by inspecting the source: `src/content/parsers/claude-ai.ts` in this repository.
+
+## YouTube transcript capture (v0.8.0+)
+
+When you capture a video page on `youtube.com` / `youtu.be`:
+
+- The extension fetches the caption/transcript track from **YouTube's own endpoints, from within the YouTube tab itself**, using your existing session
+- These requests are **same-origin** — they go to YouTube, not to any server operated by the extension author or a third party
+- The transcript is processed locally into Markdown, then handled exactly like any other capture (clipboard / buffer / linked file / MCP store). Fetches are capped by a 15-second timeout (v1.0.0+)
+
+You can verify this by inspecting the source: `src/content/parsers/youtube.ts` in this repository.
 
 ## MCP server (v0.5.0+)
 
