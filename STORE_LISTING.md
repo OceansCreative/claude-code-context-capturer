@@ -33,7 +33,8 @@ What it does:
 • MCP server for on-demand context (v0.5.0+) — save captures to a directory and the bundled MCP server hands them to Claude Code only when it asks for them, keeping CLAUDE.md small. Tools: get_context / list_contexts / search_contexts / stats_contexts, with tag/date filtering. v0.7.0 added the CCC_MCP_TOOLS env var to trim the tool set and save ~666 tokens/turn vs the full set
 • Reddit thread capture (v1.1.0+) — captures a post plus its comment tree via Reddit's JSON API: selftext and comments as native Markdown, nested replies as blockquotes, deleted/removed comments skipped, capped at 100 comments with a truncation note
 • Hacker News thread capture (v1.1.0+) — captures the story (title, link, points, author, Ask HN text) and the comment tree with nesting preserved as quotes; [dead]/[flagged] skipped, capped at the first 100 comments
-• Site-specific parsers for GitHub, Stack Overflow, Hacker News, Zenn, Qiita, MDN
+• X / Twitter thread capture (v1.2.0+) — captures the visible thread on a status page straight from the DOM (no internal API calls): focal tweet, same-author continuations as a numbered sequence, and replies flat (capped at 50). Mentions/hashtags/links become Markdown links, emoji preserved, quote tweets as blockquotes, media as [image]/[video] placeholders, promoted content skipped
+• Site-specific parsers for GitHub, Stack Overflow, Hacker News, X/Twitter, Zenn, Qiita, MDN
 • Generic parser (Mozilla Readability) for everything else
 • Selection mode: capture just what you've highlighted
 • Buffer mode: stack captures in extension storage for later export
@@ -77,7 +78,8 @@ Claude Code Context Capturer は、開いている Web ページを Markdown に
 • MCP サーバーによるオンデマンド供給 (v0.5.0+) — キャプチャを専用ディレクトリへ 1 件 1 ファイルで保存し、付属の MCP サーバーが Claude Code から要求された時だけ渡します。CLAUDE.md を肥大化させずに参照可能。tools: get_context / list_contexts / search_contexts / stats_contexts、タグ・日付フィルタ対応。v0.7.0 で CCC_MCP_TOOLS env var が追加され、ツールセットを絞ってターンあたり〜666 トークン削減可能
 • Reddit スレッドキャプチャ (v1.1.0+) — post とコメントツリーを Reddit の JSON API 経由で取得。selftext / コメントは Markdown のまま、ネストは blockquote で表現、deleted / removed はスキップ、最大 100 コメントで truncation を明記
 • Hacker News スレッドキャプチャ (v1.1.0+) — item ページのストーリー(タイトル / リンク / points / 投稿者 / Ask HN 本文)とコメントツリーをネスト構造(引用)を保って抽出。[dead] / [flagged] はスキップ、最初の 100 コメントでキャップ
-• GitHub・Stack Overflow・Hacker News・Zenn・Qiita・MDN のサイト別パーサー
+• X / Twitter スレッドキャプチャ (v1.2.0+) — status ページに表示中のスレッドを DOM から直接抽出(内部 API は不使用)。focal tweet + 同一著者の続きツイート(番号付き)+ リプライ(フラット・最大 50 件)。mention / hashtag / リンクは Markdown リンク化、絵文字保持、引用ツイートは blockquote、画像 / 動画は [image] / [video] プレースホルダ、プロモ枠はスキップ
+• GitHub・Stack Overflow・Hacker News・X / Twitter・Zenn・Qiita・MDN のサイト別パーサー
 • その他のサイトは Mozilla Readability で本文抽出
 • 選択範囲モード(テキスト選択時はその部分のみ)
 • バッファモード(複数キャプチャを溜めて一括エクスポート)
