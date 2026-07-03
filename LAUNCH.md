@@ -1,8 +1,8 @@
 # Launch playbook
 
-Copy-paste-ready material for shipping the latest version (currently **v1.0.0**) publicly. Order the actions top-to-bottom; each section is independent.
+Copy-paste-ready material for shipping the latest version (currently **v1.1.0**) publicly. Order the actions top-to-bottom; each section is independent.
 
-> **Status note:** v0.3.0 was approved and is live on the Chrome Web Store. Every update since (v0.4.x through v1.0.0) keeps the permissions list unchanged, so no fresh permission justifications are required — reviews should be fast.
+> **Status note:** v0.3.0 was approved and is live on the Chrome Web Store. Every update since (v0.4.x through v1.1.0) keeps the permissions list unchanged, so no fresh permission justifications are required — reviews should be fast.
 
 ---
 
@@ -12,10 +12,10 @@ The production zip is built locally — it is no longer committed to the repo. T
 
 ```bash
 npm install && npm run build
-cd dist && zip -rq ../claude-code-context-capturer-v1.0.0.zip . && cd ..
+cd dist && zip -rq ../claude-code-context-capturer-v1.1.0.zip . && cd ..
 ```
 
-The latest released zip is also attached to the [v1.0.0 release on GitHub](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.0.0) for direct download.
+The latest released zip is also attached to the [v1.1.0 release on GitHub](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.1.0) for direct download.
 
 ### Pre-flight checklist
 
@@ -54,7 +54,13 @@ Expect 1–14 days. Email notifications go to the developer account address.
 
 ## 2. Hacker News — Show HN post
 
-Title (under 80 chars):
+Title (under 80 chars — first option recommended; the HN-parser hook earns goodwill):
+
+```
+Show HN: Pipe web pages, HN threads, and claude.ai chats into your CLAUDE.md
+```
+
+Alternate (safer, feature-neutral):
 
 ```
 Show HN: Chrome extension piping web pages and claude.ai chats into CLAUDE.md
@@ -63,7 +69,7 @@ Show HN: Chrome extension piping web pages and claude.ai chats into CLAUDE.md
 Body (paste into the URL field as a self post; leave the URL field blank):
 
 ```
-Hi HN. I built a Chrome extension that turns the web page you're reading — including your claude.ai conversations and YouTube transcripts — into clean Markdown and either appends it directly to your project's context files (CLAUDE.md, and .cursorrules / .windsurfrules if you run several agents) OR exposes it to Claude Code on demand via a bundled MCP server. It just hit 1.0 after a pre-1.0 audit pass.
+Hi HN. I built a Chrome extension that turns the web page you're reading — including your claude.ai conversations and YouTube transcripts — into clean Markdown and either appends it directly to your project's context files (CLAUDE.md, and .cursorrules / .windsurfrules if you run several agents) OR exposes it to Claude Code on demand via a bundled MCP server. And yes — it parses HN item pages, so it can capture this very thread.
 
 Why bother — the existing workflow leaks context badly. You spend an hour brainstorming with claude.ai, then switch to your terminal where Claude Code is running, and the agent knows none of what you just discussed. claude.ai share links 403 from outside the browser session. URLs to articles don't reliably work (many models can't fetch). Copy-pasting brings ads, sidebars, footers. Manual CLAUDE.md edits don't survive a busy day. And once your CLAUDE.md grows past ~30k tokens, Anthropic's own guidance is that Claude starts ignoring your instructions.
 
@@ -79,6 +85,8 @@ For long claude.ai planning chats, an artifacts-only mode extracts just the code
 
 There's also a YouTube parser (v0.8.0+): it captures the transcript (manual or auto-generated captions) plus title / channel / duration, and when the video has chapters they become [mm:ss]-timestamped sub-headings — so conference talks and tutorials can land in your context files too.
 
+v1.1.0 added Reddit and Hacker News thread parsers. Reddit goes through the JSON endpoint (.json?raw_json=1) rather than scraping the shreddit DOM — selftext and comments are already Markdown there, nesting renders as blockquotes, deleted comments are skipped with their surviving children promoted. HN reconstructs the comment tree from the indent encoding in its table layout, skips [dead]/[flagged], and caps megathreads at 100 comments with an explicit truncation note.
+
 Some build notes that might be useful to others:
 - MV3 service workers can't use the File System Access API or write to the clipboard while the popup steals focus. The fix is offscreen documents — chrome.offscreen.createDocument spins up a hidden page that handles both. The clipboard path uses the legacy textarea + execCommand("copy") trick because navigator.clipboard.writeText still requires document focus even from offscreen contexts.
 - FileSystemFileHandle is structured-cloneable but not JSON-serializable, so chrome.storage loses the file binding. IndexedDB preserves it across browser restarts.
@@ -87,7 +95,7 @@ Some build notes that might be useful to others:
 
 Honest positioning: the broader "Web → Markdown" category is crowded — LLMFeeder and Save are mature options. The specific niche of "directly write to your AI agent's context file with URL-based routing, including claude.ai conversations, with an MCP-pull alternative" appears empty, which is what I targeted.
 
-This is the 1.0: no new features over 0.9 — a multi-agent pre-1.0 code audit surfaced no blockers, and the release hardens what came out of it (fan-out partial-failure surfacing, a 15s timeout on YouTube transcript fetches). 100% local, MIT licensed, 129 unit tests, real-Chrome e2e for every release.
+1.0 shipped after a multi-agent pre-1.0 code audit (no blockers; the release hardened fan-out partial-failure surfacing and added a 15s timeout on transcript fetches). 1.1 followed with the Reddit + HN parsers. 100% local, MIT licensed, 166 unit tests, real-Chrome e2e for every release.
 
 Repo: https://github.com/OceansCreative/claude-code-context-capturer
 Chrome Web Store: https://chromewebstore.google.com/detail/claude-code-context-captu/bnhoinbchkcamklfcpnjplljjodiikfo
@@ -129,11 +137,11 @@ Body:
 
 **Preview before write (v0.6.0+)** — review the captured Markdown in a window, trim cruft, then confirm. Toggleable.
 
-**Site-specific parsers** for GitHub (Issues / PRs / Discussions), Stack Overflow, Zenn, Qiita, MDN, **YouTube transcripts with chapters (v0.8.0+)**, and **claude.ai conversations** (via the internal API, preserving thinking / tool_use / branches). Generic Readability fallback for everything else. 100% local — no telemetry, no API key, no external server.
+**Site-specific parsers** for GitHub (Issues / PRs / Discussions), Stack Overflow, Zenn, Qiita, MDN, **YouTube transcripts with chapters (v0.8.0+)**, **Reddit and Hacker News threads (v1.1.0+)** — yes, it can capture this thread — and **claude.ai conversations** (via the internal API, preserving thinking / tool_use / branches). Generic Readability fallback for everything else. 100% local — no telemetry, no API key, no external server.
 
 **MIT licensed.** Repo: https://github.com/OceansCreative/claude-code-context-capturer
 
-Happy to take feedback on missing parsers, UX, or the routing model. Just shipped v1.0.0 — a pre-1.0 audit and hardening pass, 129 tests. Top candidate for the next parser: X/Twitter threads.
+Happy to take feedback on missing parsers, UX, or the routing model. Just shipped v1.1.0 — Reddit + Hacker News thread parsers on top of the audited 1.0, 166 tests. Top candidate for the next parser: X/Twitter threads.
 ```
 
 ### Subreddits to consider (in order of fit)
@@ -152,7 +160,7 @@ Don't blast all four day-one. Start with r/ClaudeAI; if it lands well, cross-pos
 Single tweet (280-char budget — currently fits):
 
 ```
-Chrome extension: capture web pages, claude.ai chats + YouTube transcripts as Markdown. Fan out to CLAUDE.md + .cursorrules + .windsurfrules, OR pull via bundled MCP server. URL routing per project. 100% local, MIT, v1.0, 129 tests.
+Chrome extension: capture web pages, claude.ai chats, YouTube transcripts + Reddit/HN threads as Markdown. Fan out to CLAUDE.md + .cursorrules + .windsurfrules, or pull on demand via MCP. 100% local, MIT, v1.1, 166 tests.
 
 github.com/OceansCreative/claude-code-context-capturer
 ```
