@@ -26,6 +26,8 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
     // mcp-server is a separate Node package with its own vitest run.
-    exclude: ['node_modules', 'dist', 'mcp-server/**'],
+    // .claude/ holds parallel-agent worktree checkouts whose test copies
+    // would otherwise be double-counted in this run.
+    exclude: ['node_modules', 'dist', 'mcp-server/**', '.claude/**'],
   },
 });
