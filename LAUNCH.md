@@ -1,8 +1,8 @@
 # Launch playbook
 
-Copy-paste-ready material for shipping the latest version (currently **v1.1.0**) publicly. Order the actions top-to-bottom; each section is independent.
+Copy-paste-ready material for shipping the latest version (currently **v1.2.0**) publicly. Order the actions top-to-bottom; each section is independent.
 
-> **Status note:** v0.3.0 was approved and is live on the Chrome Web Store. Every update since (v0.4.x through v1.1.0) keeps the permissions list unchanged, so no fresh permission justifications are required — reviews should be fast.
+> **Status note:** v0.3.0 was approved and is live on the Chrome Web Store. Every update since (v0.4.x through v1.2.0) keeps the permissions list unchanged, so no fresh permission justifications are required — reviews should be fast.
 
 ---
 
@@ -12,10 +12,10 @@ The production zip is built locally — it is no longer committed to the repo. T
 
 ```bash
 npm install && npm run build
-cd dist && zip -rq ../claude-code-context-capturer-v1.1.0.zip . && cd ..
+cd dist && zip -rq ../claude-code-context-capturer-v1.2.0.zip . && cd ..
 ```
 
-The latest released zip is also attached to the [v1.1.0 release on GitHub](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.1.0) for direct download.
+The latest released zip is also attached to the [v1.2.0 release on GitHub](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.2.0) for direct download.
 
 ### Pre-flight checklist
 
@@ -85,7 +85,7 @@ For long claude.ai planning chats, an artifacts-only mode extracts just the code
 
 There's also a YouTube parser (v0.8.0+): it captures the transcript (manual or auto-generated captions) plus title / channel / duration, and when the video has chapters they become [mm:ss]-timestamped sub-headings — so conference talks and tutorials can land in your context files too.
 
-v1.1.0 added Reddit and Hacker News thread parsers. Reddit goes through the JSON endpoint (.json?raw_json=1) rather than scraping the shreddit DOM — selftext and comments are already Markdown there, nesting renders as blockquotes, deleted comments are skipped with their surviving children promoted. HN reconstructs the comment tree from the indent encoding in its table layout, skips [dead]/[flagged], and caps megathreads at 100 comments with an explicit truncation note.
+v1.1.0 added Reddit and Hacker News thread parsers. Reddit goes through the JSON endpoint (.json?raw_json=1) rather than scraping the shreddit DOM — selftext and comments are already Markdown there, nesting renders as blockquotes, deleted comments are skipped with their surviving children promoted. HN reconstructs the comment tree from the indent encoding in its table layout, skips [dead]/[flagged], and caps megathreads at 100 comments with an explicit truncation note. v1.2.0 added X/Twitter threads: DOM-only via data-testid anchors (no internal API calls, no account-flag risk), focal tweet + self-thread + replies, quote tweets as blockquotes, promoted content skipped.
 
 Some build notes that might be useful to others:
 - MV3 service workers can't use the File System Access API or write to the clipboard while the popup steals focus. The fix is offscreen documents — chrome.offscreen.createDocument spins up a hidden page that handles both. The clipboard path uses the legacy textarea + execCommand("copy") trick because navigator.clipboard.writeText still requires document focus even from offscreen contexts.
@@ -95,7 +95,7 @@ Some build notes that might be useful to others:
 
 Honest positioning: the broader "Web → Markdown" category is crowded — LLMFeeder and Save are mature options. The specific niche of "directly write to your AI agent's context file with URL-based routing, including claude.ai conversations, with an MCP-pull alternative" appears empty, which is what I targeted.
 
-1.0 shipped after a multi-agent pre-1.0 code audit (no blockers; the release hardened fan-out partial-failure surfacing and added a 15s timeout on transcript fetches). 1.1 followed with the Reddit + HN parsers. 100% local, MIT licensed, 166 unit tests, real-Chrome e2e for every release.
+1.0 shipped after a multi-agent pre-1.0 code audit (no blockers; the release hardened fan-out partial-failure surfacing and added a 15s timeout on transcript fetches). 1.1 followed with the Reddit + HN parsers, 1.2 with X/Twitter. 100% local, MIT licensed, 184 unit tests, real-Chrome e2e for every release.
 
 Repo: https://github.com/OceansCreative/claude-code-context-capturer
 Chrome Web Store: https://chromewebstore.google.com/detail/claude-code-context-captu/bnhoinbchkcamklfcpnjplljjodiikfo
@@ -137,11 +137,11 @@ Body:
 
 **Preview before write (v0.6.0+)** — review the captured Markdown in a window, trim cruft, then confirm. Toggleable.
 
-**Site-specific parsers** for GitHub (Issues / PRs / Discussions), Stack Overflow, Zenn, Qiita, MDN, **YouTube transcripts with chapters (v0.8.0+)**, **Reddit and Hacker News threads (v1.1.0+)** — yes, it can capture this thread — and **claude.ai conversations** (via the internal API, preserving thinking / tool_use / branches). Generic Readability fallback for everything else. 100% local — no telemetry, no API key, no external server.
+**Site-specific parsers** for GitHub (Issues / PRs / Discussions), Stack Overflow, Zenn, Qiita, MDN, **YouTube transcripts with chapters (v0.8.0+)**, **Reddit and Hacker News threads (v1.1.0+)** — yes, it can capture this thread — **X/Twitter threads (v1.2.0+)**, and **claude.ai conversations** (via the internal API, preserving thinking / tool_use / branches). Generic Readability fallback for everything else. 100% local — no telemetry, no API key, no external server.
 
 **MIT licensed.** Repo: https://github.com/OceansCreative/claude-code-context-capturer
 
-Happy to take feedback on missing parsers, UX, or the routing model. Just shipped v1.1.0 — Reddit + Hacker News thread parsers on top of the audited 1.0, 166 tests. Top candidate for the next parser: X/Twitter threads.
+Happy to take feedback on missing parsers, UX, or the routing model. Just shipped v1.2.0 — Reddit + Hacker News thread parsers in 1.1, X/Twitter threads in 1.2, on top of the audited 1.0. 184 tests. Tell me which parser you want next.
 ```
 
 ### Subreddits to consider (in order of fit)
@@ -160,7 +160,7 @@ Don't blast all four day-one. Start with r/ClaudeAI; if it lands well, cross-pos
 Single tweet (280-char budget — currently fits):
 
 ```
-Chrome extension: capture web pages, claude.ai chats, YouTube transcripts + Reddit/HN threads as Markdown. Fan out to CLAUDE.md + .cursorrules + .windsurfrules, or pull on demand via MCP. 100% local, MIT, v1.1, 166 tests.
+Chrome extension: capture web pages, claude.ai chats, YouTube transcripts + Reddit/HN/X threads as Markdown. Fan out to CLAUDE.md + .cursorrules + .windsurfrules, or pull on demand via MCP. 100% local, MIT, v1.2, 184 tests.
 
 github.com/OceansCreative/claude-code-context-capturer
 ```
