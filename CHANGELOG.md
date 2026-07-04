@@ -6,6 +6,15 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.2.0 — X/Twitter thread parser
+
+- **New:** X/Twitter site-specific parser. Captures an x.com / twitter.com status page — the focal tweet, same-author thread continuations as a numbered sequence, and replies (flat, capped at 50 with a truncation note). Quote tweets render as blockquotes, promoted content is skipped, emoji are recovered via img-alt, and mentions/hashtags/links convert to Markdown links.
+- DOM-only via stable `data-testid` anchors (documented at the top of `x.ts` for future breakage diagnosis) — deliberately no internal-API calls, so no account-flag risk. Friendly error when a login wall hides the tweet. Stable `dedupeKey: x:<statusId>` so re-capturing updates in place.
+- Site-specific parsers now cover **GitHub / Stack Overflow / Zenn / Qiita / MDN / YouTube / Reddit / Hacker News / X (Twitter) / claude.ai** — 10 sources.
+- Docs: fan-out route screenshot added for the Web Store listing.
+- Permissions unchanged from v1.1.0. 184/184 unit tests pass (+18 vs v1.1.0).
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.2.0) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v1.1.0...v1.2.0)
+
 ## v1.1.0 — Reddit + Hacker News parsers
 
 - **New:** Reddit site-specific parser. Captures a Reddit post + its comment tree via Reddit's JSON endpoint (`.json?raw_json=1`) — no scraping of the unstable shreddit DOM. Selftext and comment bodies pass through as native Markdown, nested replies render as blockquotes, deleted/removed comments are skipped (surviving children promoted), `more` stubs are tolerated with a truncation note. 100-comment cap, 15s fetch timeout, friendly 429 (rate-limit) and 403 (private/quarantined) errors. Stable `dedupeKey: reddit:<postId>` so re-capturing updates in place.
