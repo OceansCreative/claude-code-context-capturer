@@ -1,25 +1,26 @@
 # Icons
 
-Place your extension icons here:
+The "A2" logo (2026-07 refresh): capture-frame corner brackets around a
+terminal `>_` prompt — "capture the web for your CLI agent" in one mark.
 
-- `icon-16.png` — 16x16 pixels
-- `icon-32.png` — 32x32 pixels
-- `icon-48.png` — 48x48 pixels
-- `icon-128.png` — 128x128 pixels
+- `icon-128.png`, `icon-48.png`, `icon-32.png` — full design
+- `icon-16.png` — simplified variant: brackets dropped, `>_` only. All four
+  brackets plus the glyph turn to mush at 16px, so the toolbar icon keeps
+  just the prompt.
 
-Required for both the toolbar action and the Chrome Web Store listing.
+## Palette
 
-## Suggested workflow
+- Charcoal background: `#262421`
+- Coral (brackets / underscore): `#D97757`
+- Cream (chevron): `#F0EEE6`
 
-If you don't have icons yet, you can:
+## Regenerating
 
-1. Generate a simple square icon from the OceansBase brand palette
-2. Use online tools like [Real Favicon Generator](https://realfavicongenerator.net/) or [Figma](https://figma.com/) to export PNGs at the four required sizes
-3. Save the PNGs in this directory with the filenames listed above
+SVG sources live in `docs/brand/` (`icon-a2.svg`, `icon-a2-16px.svg`).
+Render them to the four PNGs with any SVG rasterizer, or via puppeteer:
+load the SVG in a page sized to the target dimensions and screenshot with
+`omitBackground: true` (keeps the rounded corners transparent).
 
-## Design guidance
-
-- Keep it readable at 16x16 (the smallest size shown in the extension manager)
-- Use solid shapes rather than thin lines or gradients
-- Match the OceansBase brand: Navy/Cyan palette (Ocean Deep `#0a2540`, Cyan Accent `#00c4cc`) works well
-- Avoid text in the icon — it's unreadable at small sizes
+Required sizes: 16 / 32 / 48 / 128, referenced from `src/manifest.config.ts`
+(both `action.default_icon` and `icons`). 128px doubles as the Chrome Web
+Store listing icon.
