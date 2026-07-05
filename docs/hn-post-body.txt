@@ -1,0 +1,32 @@
+Hi HN. I built a Chrome extension that turns the web page you're reading — including your claude.ai conversations and YouTube transcripts — into clean Markdown and either appends it directly to your project's context files (CLAUDE.md, and .cursorrules / .windsurfrules if you run several agents) OR exposes it to Claude Code on demand via a bundled MCP server. And yes — it parses HN item pages, so it can capture this very thread.
+
+Why bother — the existing workflow leaks context badly. You spend an hour brainstorming with claude.ai, then switch to your terminal where Claude Code is running, and the agent knows none of what you just discussed. claude.ai share links 403 from outside the browser session. URLs to articles don't reliably work (many models can't fetch). Copy-pasting brings ads, sidebars, footers. Manual CLAUDE.md edits don't survive a busy day. And once your CLAUDE.md grows past ~30k tokens, Anthropic's own guidance is that Claude starts ignoring your instructions.
+
+Two delivery modes, depending on how you want to spend context budget:
+
+1. Direct context-file append (since v0.2.0). Pick a file with the File System Access API once. Subsequent captures append directly. URL-pattern routing — github.com/anthropic/* goes to one file, zenn.dev/* to another, claude.ai/chat/* to whichever project you're working on. Good when you want everything front-loaded. Since v0.9.0 a route can fan out to multiple targets: one capture appends to CLAUDE.md (Claude Code) + .cursorrules (Cursor) + .windsurfrules (Windsurf) simultaneously, and a partial failure (one file's permission expired) is reported instead of silently swallowed as a green checkmark.
+
+2. MCP-on-demand (v0.5.0+). Captures land as individual Markdown files in a directory. A bundled MCP server exposes get_context / list_contexts / search_contexts / stats_contexts to Claude Code. The agent pulls what it needs when it needs it; CLAUDE.md stays small. Tag and date filters let big libraries stay searchable. Re-capturing the same claude.ai conversation overwrites the existing file (stable dedupeKey from the conversation UUID), so you don't accumulate snapshot silos. Tool definitions themselves cost tokens every turn, so a CCC_MCP_TOOLS env var trims the exposed tool set — measured with a bundled script, the lean profile saves ~52% of the per-turn tool-definition cost, minimal ~82%.
+
+Before anything is written, an optional preview window (v0.6.0+) lets you trim cruft — nav menus, sidebar leftovers — and confirm or cancel.
+
+For long claude.ai planning chats, an artifacts-only mode extracts just the code/documents Claude wrote — drops the conversation entirely. Or limit to the last N messages. Both toggles surface as checkboxes on the popup whenever you're on a claude.ai chat.
+
+There's also a YouTube parser (v0.8.0+): it captures the transcript (manual or auto-generated captions) plus title / channel / duration, and when the video has chapters they become [mm:ss]-timestamped sub-headings — so conference talks and tutorials can land in your context files too.
+
+v1.1.0 added Reddit and Hacker News thread parsers. Reddit goes through the JSON endpoint (.json?raw_json=1) rather than scraping the shreddit DOM — selftext and comments are already Markdown there, nesting renders as blockquotes, deleted comments are skipped with their surviving children promoted. HN reconstructs the comment tree from the indent encoding in its table layout, skips [dead]/[flagged], and caps megathreads at 100 comments with an explicit truncation note. v1.2.0 added X/Twitter threads: DOM-only via data-testid anchors (no internal API calls, no account-flag risk), focal tweet + self-thread + replies, quote tweets as blockquotes, promoted content skipped.
+
+Some build notes that might be useful to others:
+- MV3 service workers can't use the File System Access API or write to the clipboard while the popup steals focus. The fix is offscreen documents — chrome.offscreen.createDocument spins up a hidden page that handles both. The clipboard path uses the legacy textarea + execCommand("copy") trick because navigator.clipboard.writeText still requires document focus even from offscreen contexts.
+- FileSystemFileHandle is structured-cloneable but not JSON-serializable, so chrome.storage loses the file binding. IndexedDB preserves it across browser restarts.
+- claude.ai is a React SPA — its DOM drops thinking blocks, tool_use entries, and merges branches. The parser hits claude.ai's internal API (/api/organizations/{org}/chat_conversations/{uuid}?tree=True) from inside the claude.ai tab, where the user's session cookie is automatically attached. Walks the tree from current_leaf back to root.
+- For real-Chrome verification under puppeteer, OPFS (navigator.storage.getDirectory()) gives you a FileSystemFileHandle without the OS picker — same interface, queryPermission auto-granted. Lets you e2e-test the entire write path in CI.
+
+Honest positioning: the broader "Web → Markdown" category is crowded — LLMFeeder and Save are mature options. The specific niche of "directly write to your AI agent's context file with URL-based routing, including claude.ai conversations, with an MCP-pull alternative" appears empty, which is what I targeted.
+
+1.0 shipped after a multi-agent pre-1.0 code audit (no blockers; the release hardened fan-out partial-failure surfacing and added a 15s timeout on transcript fetches). 1.1 followed with the Reddit + HN parsers, 1.2 with X/Twitter. 100% local, MIT licensed, 184 unit tests, real-Chrome e2e for every release.
+
+Repo: https://github.com/OceansCreative/claude-code-context-capturer
+Chrome Web Store: https://chromewebstore.google.com/detail/claude-code-context-captu/bnhoinbchkcamklfcpnjplljjodiikfo (heads-up: the store build can lag a few days behind while an update is in review — the GitHub release zip is always the newest version)
+
+Happy to answer questions about the offscreen-doc + IndexedDB pattern, the claude.ai internal API, or about positioning in the AI clipper space.

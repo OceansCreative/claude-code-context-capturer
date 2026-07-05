@@ -101,7 +101,7 @@ Alternate (safer, feature-neutral):
 Show HN: Chrome extension piping web pages and claude.ai chats into CLAUDE.md
 ```
 
-Body (paste into the URL field as a self post; leave the URL field blank):
+Body (paste into the **text** field; leave the **url** field blank):
 
 ```
 Hi HN. I built a Chrome extension that turns the web page you're reading — including your claude.ai conversations and YouTube transcripts — into clean Markdown and either appends it directly to your project's context files (CLAUDE.md, and .cursorrules / .windsurfrules if you run several agents) OR exposes it to Claude Code on demand via a bundled MCP server. And yes — it parses HN item pages, so it can capture this very thread.
