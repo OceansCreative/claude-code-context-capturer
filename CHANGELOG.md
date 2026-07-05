@@ -6,6 +6,13 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.2.1 — New logo (A2)
+
+- **New logo.** The extension icons are redesigned: coral capture-frame corner brackets around a cream `>` + coral `_` terminal prompt on warm charcoal (#262421 / #D97757 / #F0EEE6) — "capture the web for your CLI agent" in one mark. The 128/48/32px sizes carry the full design; 16px is a simplified `>_` toolbar variant. SVG sources live in `docs/brand/`. The new icon reaches the toolbar and the Web Store listing via this package.
+- Options footer: Power Pack cross-sell link with UTM tracking (monetization Phase 0).
+- No parser or feature changes. Permissions unchanged from v1.2.0. 184/184 unit tests pass.
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.2.1) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v1.2.0...v1.2.1)
+
 ## v1.2.0 — X/Twitter thread parser
 
 - **New:** X/Twitter site-specific parser. Captures an x.com / twitter.com status page — the focal tweet, same-author thread continuations as a numbered sequence, and replies (flat, capped at 50 with a truncation note). Quote tweets render as blockquotes, promoted content is skipped, emoji are recovered via img-alt, and mentions/hashtags/links convert to Markdown links.
