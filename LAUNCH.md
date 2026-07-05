@@ -4,6 +4,11 @@ Copy-paste-ready material for shipping the latest version (currently **v1.2.0**)
 
 > **Status note:** v0.3.0 was approved and is live on the Chrome Web Store. Every update since (v0.4.x through v1.2.0) keeps the permissions list unchanged, so no fresh permission justifications are required — reviews should be fast.
 
+> **Launch strategy (decided 2026-07-05): international first.**
+> 1. **Phase INTL** — awesome-claude-code list PRs → Show HN → r/ClaudeAI → X (English). Goal: raw feedback from the largest Claude Code audience.
+> 2. **Brush-up** — triage the feedback, ship fixes / most-requested parser as v1.3.
+> 3. **Phase JP (deferred)** — Zenn build-log article + Japanese X post, launched with the improved v1.3. Do NOT start the Zenn article before international feedback lands.
+
 ---
 
 ## 1. Chrome Web Store submission (or update)
@@ -49,6 +54,35 @@ Aim for 3–5 screenshots; quality > quantity.
 ### Review timeline
 
 Expect 1–14 days. Email notifications go to the developer account address.
+
+---
+
+## 1.5 awesome-claude-code list PRs (do these BEFORE the HN post — durable discovery, zero risk)
+
+Submit the extension to the curated lists. Unlike the one-shot posts below, listings keep converting for months, and an accepted PR is mild social proof by launch day.
+
+Targets (status as of 2026-07-05):
+
+1. [hesreallyhim/awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code) — the canonical list. **Submissions temporarily CLOSED** (issue creation is collaborator-only while their redesign settles; PRs are never accepted — web-UI issue form only, must be filed by a human). **Retry after Show HN**: check whether https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml is open again, and submit with the field contents below. Post-HN is the better timing anyway — their CONTRIBUTING explicitly favors projects that already have users/traction.
+2. [jqueryscript/awesome-claude-code](https://github.com/jqueryscript/awesome-claude-code) — submitted as [PR #475](https://github.com/jqueryscript/awesome-claude-code/pull/475), but **expect no merge**: as of 2026-07-05 the repo has 360 open PRs, 0 ever merged, 53 closed unmerged — the maintainer curates the README directly and ignores external PRs. Leave the PR open (zero cost, tiny discovery surface) but don't invest further here.
+
+**Takeaway:** both awesome lists are effectively closed to submissions right now. The durable-listing channel is deprioritized; Show HN carries the launch. Revisit the hesreallyhim form after HN traction.
+
+Field contents for the hesreallyhim issue form (when it reopens):
+
+- **Display Name:** `Claude Code Context Capturer`
+- **Category:** `Memory & Context Persistence`
+- **Link:** `https://github.com/OceansCreative/claude-code-context-capturer`
+- **Author Name:** `Kazushi Ikeda (OceansCreative)` / **Author Link:** `https://github.com/OceansCreative`
+- **Description:** Chrome extension that captures web pages, claude.ai conversations, and YouTube/Reddit/Hacker News/X threads as Markdown and appends them to a project's CLAUDE.md via the File System Access API, with URL-pattern routing across projects and fan-out to .cursorrules/.windsurfrules. A bundled MCP server can instead store captures as individual files and serve them to Claude Code on demand, keeping CLAUDE.md small. Fully local, MIT licensed.
+
+Suggested one-line entry (adapt to each list's format):
+
+```
+[Claude Code Context Capturer](https://github.com/OceansCreative/claude-code-context-capturer) - Chrome extension that captures web pages, claude.ai conversations, and YouTube/Reddit/HN/X threads as Markdown and appends them to CLAUDE.md (URL-pattern routing, multi-agent fan-out to .cursorrules/.windsurfrules) or serves them on demand via a bundled MCP server.
+```
+
+Follow each repo's CONTRIBUTING.md if present; some lists require alphabetical ordering or a specific category.
 
 ---
 
@@ -105,7 +139,7 @@ Happy to answer questions about the offscreen-doc + IndexedDB pattern, the claud
 
 ### Posting tips
 
-- Post Tue/Wed/Thu **9:00 AM PT** for the largest active US/EU window
+- Post Tue/Wed/Thu **9:00 AM PT** for the largest active US/EU window — that is **1:00 AM JST the following day** (PDT). Plan to stay up 1:00–3:00 AM JST for the reply window, or accept the smaller 10:00 PM JST (= 6:00 AM PT) slot
 - Don't ask for upvotes; HN penalizes solicited boosting
 - Reply to early comments within 30 minutes — first hour determines visibility
 - If it lands at #1–10 on Show HN, expect 100–1000 stars in 24–48h
