@@ -138,6 +138,44 @@ Chrome Web Store: https://chromewebstore.google.com/detail/claude-code-context-c
 Happy to answer questions about the offscreen-doc + IndexedDB pattern, the claude.ai internal API, or about positioning in the AI clipper space.
 ```
 
+### Prepared replies — anticipated questions (paste-and-adapt, don't paste verbatim twice)
+
+**Q: Why does this need `<all_urls>` host permissions and a content script on every page?**
+
+> Fair question — it's the maximal-looking permission set, so here's exactly why each piece exists. The content script has to run on arbitrary pages because capture is triggered three ways: popup button, keyboard shortcut, and right-click menu. The latter two fire without a popup gesture, so `activeTab`-only injection doesn't cover them. The script is inert until it receives a capture message — it registers a listener and does nothing else. No remote code, no analytics, no outbound requests from the extension itself (the only fetches happen inside the page you're capturing, e.g. claude.ai's own API from the claude.ai tab). It's MIT-licensed and small enough to audit in an afternoon: the content entry point is src/content/index.ts.
+
+**Q: You're calling claude.ai's internal API. Is that ToS-safe? Won't Anthropic break it?**
+
+> Two separate concerns, honest answers to both. (1) ToS: the extension makes a read-only GET to the same endpoint the claude.ai web app itself calls, from inside the user's own claude.ai tab, with the user's own session, one request per explicit click — fetching a conversation the user is currently looking at. It doesn't automate actions, scrape other users' data, or bypass access controls. I'm not going to claim Anthropic endorses it — they don't — but it's the user reading their own data. (2) Breakage: yes, an internal API can change any day. The parser is isolated behind a dispatcher, covered by tests with recorded fixtures, and fails gracefully (you get an error toast, not a corrupted file). If it breaks, it's one parser module to fix, and the DOM/Readability fallback still works.
+
+**Q: Scraping X/Twitter's DOM seems brittle. Ban risk?**
+
+> Deliberately DOM-only — it makes zero API calls, which is the design choice that protects your account. It anchors on data-testid attributes (X's own test hooks, far more stable than obfuscated class names) and reads what's already rendered in your tab. Nothing is requested that the page didn't already load. Brittle relative to an API? Somewhat, but it's the same trade Readability-based tools make, and virtualized-away tweets are explicitly marked as not captured rather than silently missing.
+
+**Q: Why not just let the agent fetch URLs itself / use an MCP fetch server?**
+
+> Fetch-at-use fails in exactly the cases that matter: claude.ai share links 403 outside the browser session, login-walled pages (private GitHub issues, your own claude.ai chats), paywalled articles, and JS-rendered SPAs where a fetch gets an empty shell. Capturing from the browser tab gets the rendered DOM with your session, once, at read time — and the result is curated by a human before it enters the context. The bundled MCP server covers the on-demand half: captures land as files and the agent pulls them when relevant.
+
+**Q: LLMFeeder / MarkDownload / Obsidian Clipper already exist. Why another clipper?**
+
+> They're good tools — the README has an honest comparison table. The short version: they output to clipboard or their own vault. This one writes into the context files your coding agent actually reads (CLAUDE.md, .cursorrules, .windsurfrules), routes by URL pattern to different projects, captures claude.ai conversations with thinking/tool_use/branches intact, and ships an MCP server for on-demand access. If you want a general-purpose clipper, use LLMFeeder. If you want your agent's context files to maintain themselves, that's the niche this fills.
+
+**Q: Firefox / Safari support?**
+
+> The direct-write path is built on the File System Access API, which is Chromium-only (Chrome, Edge, Brave, Arc). Firefox has an open position against it. Clipboard/buffer modes would port, but direct file append is the core value, so a Firefox port would be a different, weaker product. If Firefox ships FSA or an equivalent, I'll revisit.
+
+**Q: Appending web pages to CLAUDE.md will bloat it past usefulness.**
+
+> Agreed — that's why the MCP store mode exists and is the recommended setup for heavy use. Captures land as one file each in a directory; the bundled MCP server exposes list/search/get so the agent pulls only what's relevant. This follows Anthropic's own guidance to keep CLAUDE.md small. For direct-append mode there's also a max-body-length option and a preview step where you trim before anything is written.
+
+**Q: Captured pages go straight into agent context — isn't that a prompt-injection vector?**
+
+> Legitimate concern, and worth being precise about. Yes: anything you put in an agent's context can steer the agent, and a malicious page could embed instructions. Mitigations here: capture is always human-initiated (nothing auto-captures), the preview step shows you exactly what will be written before it lands, and content is wrapped in frontmatter-delimited entries so provenance is visible. But I won't overclaim — if you capture a hostile page into your context file, your agent reads it. Curate what you capture, same as you'd curate what you paste.
+
+**Q: Store version doesn't have feature X you mentioned.**
+
+> The Web Store build lags during review — v1.2.1 is in review now; the store may still serve v1.1.0 (no X/Twitter parser, old icon). The GitHub release zip is always current: https://github.com/OceansCreative/claude-code-context-capturer/releases/latest
+
 ### Posting tips
 
 - Post Tue/Wed/Thu **9:00 AM PT** for the largest active US/EU window — that is **1:00 AM JST the following day** (PDT). Plan to stay up 1:00–3:00 AM JST for the reply window, or accept the smaller 10:00 PM JST (= 6:00 AM PT) slot
