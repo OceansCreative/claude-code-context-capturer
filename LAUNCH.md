@@ -1,8 +1,9 @@
 # Launch playbook
 
-Copy-paste-ready material for shipping the latest version (currently **v1.2.0**) publicly. Order the actions top-to-bottom; each section is independent.
+Copy-paste-ready material for shipping the latest version (currently **v1.2.1**) publicly. Order the actions top-to-bottom; each section is independent.
 
-> **Status note:** v0.3.0 was approved and is live on the Chrome Web Store. Every update since (v0.4.x through v1.2.0) keeps the permissions list unchanged, so no fresh permission justifications are required — reviews should be fast.
+> **Status note:** v0.3.0 was approved and is live on the Chrome Web Store. Every update since (v0.4.x through v1.2.1) keeps the permissions list unchanged, so no fresh permission justifications are required — reviews should be fast.
+> **Store state (2026-07-05):** v1.1.0 is live; **v1.2.1 (A2 logo + X/Twitter parser + Power Pack footer) is in review** — v1.2.0 was never store-submitted. Until approval, store installs lack the X parser and show the old icon; the GitHub release zip is always current.
 
 > **Launch strategy (decided 2026-07-05): international first.**
 > 1. **Phase INTL** — awesome-claude-code list PRs → Show HN → r/ClaudeAI → X (English). Goal: raw feedback from the largest Claude Code audience.
@@ -17,10 +18,10 @@ The production zip is built locally — it is no longer committed to the repo. T
 
 ```bash
 npm install && npm run build
-cd dist && zip -rq ../claude-code-context-capturer-v1.2.0.zip . && cd ..
+cd dist && zip -rq ../claude-code-context-capturer-v1.2.1.zip . && cd ..
 ```
 
-The latest released zip is also attached to the [v1.2.0 release on GitHub](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.2.0) for direct download.
+The latest released zip is also attached to the [v1.2.1 release on GitHub](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.2.1) for direct download.
 
 ### Pre-flight checklist
 
@@ -132,7 +133,7 @@ Honest positioning: the broader "Web → Markdown" category is crowded — LLMFe
 1.0 shipped after a multi-agent pre-1.0 code audit (no blockers; the release hardened fan-out partial-failure surfacing and added a 15s timeout on transcript fetches). 1.1 followed with the Reddit + HN parsers, 1.2 with X/Twitter. 100% local, MIT licensed, 184 unit tests, real-Chrome e2e for every release.
 
 Repo: https://github.com/OceansCreative/claude-code-context-capturer
-Chrome Web Store: https://chromewebstore.google.com/detail/claude-code-context-captu/bnhoinbchkcamklfcpnjplljjodiikfo
+Chrome Web Store: https://chromewebstore.google.com/detail/claude-code-context-captu/bnhoinbchkcamklfcpnjplljjodiikfo (heads-up: the store build can lag a few days behind while an update is in review — the GitHub release zip is always the newest version)
 
 Happy to answer questions about the offscreen-doc + IndexedDB pattern, the claude.ai internal API, or about positioning in the AI clipper space.
 ```
@@ -175,7 +176,7 @@ Body:
 
 **MIT licensed.** Repo: https://github.com/OceansCreative/claude-code-context-capturer
 
-Happy to take feedback on missing parsers, UX, or the routing model. Just shipped v1.2.0 — Reddit + Hacker News thread parsers in 1.1, X/Twitter threads in 1.2, on top of the audited 1.0. 184 tests. Tell me which parser you want next.
+Happy to take feedback on missing parsers, UX, or the routing model. Just shipped v1.2.1 — Reddit + Hacker News thread parsers in 1.1, X/Twitter threads in 1.2, on top of the audited 1.0. 184 tests. Tell me which parser you want next. (Note: the Web Store build may lag a few days behind the GitHub release while updates are in review.)
 ```
 
 ### Subreddits to consider (in order of fit)
