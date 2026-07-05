@@ -1,8 +1,10 @@
 > ### 🚀 Claude Code Power Pack
 > The parallel workflow I run daily — an agent suite pre-wired with a `/ship` orchestrator and a one-command git-worktree bootstrap. Ready in 15 minutes.
-> **→ [Get the Power Pack ($29)](https://oceanscreative.lemonsqueezy.com/checkout/buy/145f2e53-a428-4b5e-b5a8-3cb4f7a740b0)**
+> Pairs naturally with this extension: capture your research into `CLAUDE.md` here, then let the Power Pack's parallel agents run with that context.
+> **→ [Get the Power Pack ($29)](https://oceanscreative.lemonsqueezy.com/checkout/buy/145f2e53-a428-4b5e-b5a8-3cb4f7a740b0?utm_source=cccc-ext&utm_medium=readme)**
 >
 > 並列開発ワークフローを実運用パックに。`/ship` オーケストレーター＋並列 worktree ブートストラップ同梱、15 分で導入。
+> この拡張と相性◎：リサーチをこの拡張で `CLAUDE.md` に集約 → Power Pack の並列エージェントがそのコンテキストで走ります。
 
 ---
 

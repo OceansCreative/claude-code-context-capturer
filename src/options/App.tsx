@@ -721,6 +721,32 @@ export default function App() {
           </ul>
         )}
       </section>
+
+      <footer className="mt-10 border-t border-slate-100 pt-4 text-center text-xs text-slate-400">
+        <p>
+          Enjoying this?{' '}
+          <a
+            href="https://oceanscreative.lemonsqueezy.com/checkout/buy/145f2e53-a428-4b5e-b5a8-3cb4f7a740b0?utm_source=cccc-ext&utm_medium=options"
+            target="_blank"
+            rel="noreferrer"
+            className="text-slate-500 underline hover:text-slate-700"
+          >
+            Claude Code Power Pack ($29)
+          </a>{' '}
+          — the parallel-agent workflow this extension feeds context into.
+        </p>
+        <p className="mt-1">
+          <a
+            href="https://github.com/OceansCreative/claude-code-context-capturer"
+            target="_blank"
+            rel="noreferrer"
+            className="text-slate-500 underline hover:text-slate-700"
+          >
+            GitHub
+          </a>{' '}
+          · MIT License · 100% local processing
+        </p>
+      </footer>
     </div>
   );
 }
