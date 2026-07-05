@@ -1,0 +1,9 @@
+Some build notes that might be useful to others:
+
+- MV3 service workers can't use the File System Access API or write to the clipboard while the popup steals focus. The fix is offscreen documents — chrome.offscreen.createDocument spins up a hidden page that handles both. The clipboard path uses the legacy textarea + execCommand("copy") trick, because navigator.clipboard.writeText still requires document focus even from offscreen contexts.
+
+- FileSystemFileHandle is structured-cloneable but NOT JSON-serializable, so a chrome.storage round-trip silently loses the OS file binding. IndexedDB preserves it across browser restarts.
+
+- claude.ai is a React SPA — its DOM drops thinking blocks and tool_use entries, and merges branches. The parser instead hits claude.ai's internal API (/api/organizations/{org}/chat_conversations/{uuid}?tree=True) from inside the claude.ai tab, where the user's own session cookie is automatically attached, then walks the tree from current_leaf back to root.
+
+- For real-Chrome verification under puppeteer, OPFS (navigator.storage.getDirectory()) hands you a FileSystemFileHandle without the OS picker — same interface, queryPermission auto-granted. That makes the entire write path e2e-testable in CI.
