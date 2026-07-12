@@ -37,8 +37,10 @@ import type {
 
 chrome.runtime.onInstalled.addListener(() => {
   // onInstalled fires on install AND on every extension update / reload.
-  // contextMenus.create() throws "Cannot create item with duplicate id" the
-  // second time around because Chrome persists menu items across reloads.
+  // contextMenus.create() with a duplicate id reports "Cannot create item
+  // with duplicate id" via chrome.runtime.lastError (an unchecked-lastError
+  // console warning, not a throw) because Chrome persists menu items across
+  // reloads.
   // Wipe first, then recreate — the standard MV3 idiom.
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
@@ -347,8 +349,9 @@ async function appendToClaudeMd(
  *   navigator.clipboard.writeText() rejects with "Document is not focused"
  *   when the popup is open (the popup steals focus from the tab). Worse,
  *   chrome.scripting.executeScript silently swallows the inner Promise
- *   rejection — the outer call resolves successfully and the rejection
- *   sits in result.error which the previous implementation didn't check.
+ *   rejection — the outer call resolves successfully and in Chrome the
+ *   error surfaces NOWHERE in the return value (result is just undefined;
+ *   the InjectionResult.error field exists only in Firefox — crbug.com/1271527).
  *   So captures looked like they succeeded but the clipboard stayed empty.
  *
  * The offscreen document's clipboard access doesn't depend on tab focus,

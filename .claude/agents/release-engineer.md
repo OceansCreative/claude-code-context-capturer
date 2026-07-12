@@ -68,15 +68,20 @@ Verify the zip's manifest version:
 unzip -p "$HOME/Desktop/claude-code-context-capturer-vX.Y.Z.zip" manifest.json | grep version
 ```
 
-### 7. Push, tag, push tag
+### 7. Push main (do NOT tag yet)
 
 ```bash
 git push origin main
+```
+
+### 8. Wait for CI on the main push, THEN tag
+
+Tag only after CI is green, so the tag always points at a CI-verified commit:
+
+```bash
 git tag -a vX.Y.Z -m "vX.Y.Z: <one-line summary>"
 git push origin vX.Y.Z
 ```
-
-### 8. Wait for CI on the main push
 
 Use the existing polling pattern:
 

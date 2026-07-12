@@ -106,7 +106,7 @@ Body (paste into the **text** field; leave the **url** field blank):
 ```
 Hi HN. I built a Chrome extension that turns the web page you're reading — including your claude.ai conversations and YouTube transcripts — into clean Markdown and either appends it directly to your project's context files (CLAUDE.md, and .cursorrules / .windsurfrules if you run several agents) OR exposes it to Claude Code on demand via a bundled MCP server. And yes — it parses HN item pages, so it can capture this very thread.
 
-Why bother — the existing workflow leaks context badly. You spend an hour brainstorming with claude.ai, then switch to your terminal where Claude Code is running, and the agent knows none of what you just discussed. claude.ai share links 403 from outside the browser session. URLs to articles don't reliably work (many models can't fetch). Copy-pasting brings ads, sidebars, footers. Manual CLAUDE.md edits don't survive a busy day. And once your CLAUDE.md grows past ~30k tokens, Anthropic's own guidance is that Claude starts ignoring your instructions.
+Why bother — the existing workflow leaks context badly. You spend an hour brainstorming with claude.ai, then switch to your terminal where Claude Code is running, and the agent knows none of what you just discussed. claude.ai share links 403 from outside the browser session. URLs to articles don't reliably work (many models can't fetch). Copy-pasting brings ads, sidebars, footers. Manual CLAUDE.md edits don't survive a busy day. And Anthropic's own docs warn that a bloated CLAUDE.md makes Claude ignore your actual instructions.
 
 Two delivery modes, depending on how you want to spend context budget:
 
