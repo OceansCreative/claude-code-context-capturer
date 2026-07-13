@@ -1,5 +1,5 @@
 import { buildFrontmatter, buildSourceFooter } from '@/shared/frontmatter-builder';
-import { loadOptions, saveOptions } from '@/shared/options-storage';
+import { loadOptions, saveOptions, markCaptured } from '@/shared/options-storage';
 import { appendToBuffer } from '@/shared/buffer-storage';
 import { buildEntryHeading } from '@/shared/file-appender';
 import { listRoutes } from '@/shared/handle-store';
@@ -35,7 +35,7 @@ import type {
 // Context menu setup
 // ---------------------------------------------------------------------------
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   // onInstalled fires on install AND on every extension update / reload.
   // contextMenus.create() with a duplicate id reports "Cannot create item
   // with duplicate id" via chrome.runtime.lastError (an unchecked-lastError
@@ -54,6 +54,16 @@ chrome.runtime.onInstalled.addListener(() => {
       contexts: ['selection'],
     });
   });
+
+  // First install ONLY (not update / reload / browser restart): open the
+  // options page with ?welcome=1 so the first-run onboarding checklist walks
+  // the user through linking a context file. Skipping this is the silent-churn
+  // path — installed but never linked, so nothing is ever captured.
+  if (details.reason === 'install') {
+    void chrome.tabs.create({
+      url: chrome.runtime.getURL('src/options/index.html?welcome=1'),
+    });
+  }
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -256,6 +266,12 @@ async function deliver(
  * with an error-level badge so the user knows to re-link them.
  */
 async function notifyDelivery(outcome: DeliveryOutcome): Promise<void> {
+  // Reaching notifyDelivery means deliver() resolved without throwing — i.e. a
+  // capture genuinely landed (or partially landed). Record it so the onboarding
+  // "Try a capture" step auto-checks, regardless of output mode. No-op after the
+  // first capture, so this stays off the sync-write hot path.
+  await markCaptured();
+
   if (outcome.partialFailures?.length) {
     const names = outcome.partialFailures.map((f) => f.fileName).join(', ');
     await notify(

@@ -3,7 +3,11 @@ import {
   loadOptions,
   saveOptions,
   resetOptions,
+  loadOnboardingState,
+  saveOnboardingState,
 } from '@/shared/options-storage';
+import OnboardingChecklist from './OnboardingChecklist';
+import { deriveOnboardingSteps } from './onboarding';
 import {
   readBuffer,
   removeFromBuffer,
@@ -41,11 +45,30 @@ export default function App() {
   const [mcpDirName, setMcpDirName] = useState<string | null>(null);
   const [mcpDirPermission, setMcpDirPermission] = useState<PermissionState | null>(null);
 
+  // First-run onboarding. `onboardingReady` gates the initial render so the
+  // checklist never flashes for users who already dismissed it. It's visible
+  // when opened via ?welcome=1 OR while it hasn't been dismissed yet.
+  const [onboardingReady, setOnboardingReady] = useState(false);
+  const [onboardingVisible, setOnboardingVisible] = useState(false);
+  const [everCaptured, setEverCaptured] = useState(false);
+
   useEffect(() => {
     void loadOptions().then(setOptions);
     void readBuffer().then(setBuffer);
     void refreshRoutes();
     void refreshMcpDir();
+
+    const welcome =
+      new URLSearchParams(window.location.search).get('welcome') === '1';
+    // Strip ?welcome=1 so a manual reload (or "Got it") doesn't force it back.
+    if (welcome) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    void loadOnboardingState().then((state) => {
+      setEverCaptured(state.everCaptured);
+      setOnboardingVisible(welcome || !state.dismissed);
+      setOnboardingReady(true);
+    });
   }, []);
 
   async function refreshMcpDir() {
@@ -284,6 +307,11 @@ export default function App() {
     await refreshRoutes();
   }
 
+  async function handleDismissOnboarding() {
+    setOnboardingVisible(false);
+    await saveOnboardingState({ dismissed: true });
+  }
+
   async function handleSave() {
     await saveOptions(options);
     setSavedAt(new Date().toLocaleTimeString());
@@ -313,10 +341,28 @@ export default function App() {
     await refreshBuffer();
   }
 
+  const onboardingSteps = deriveOnboardingSteps({
+    // "granted handle" = the same per-handle permission the route list renders.
+    routeHandleGrants: routes.map((r) =>
+      r.perHandle.some((h) => h.permission === 'granted')
+    ),
+    mcpDirGranted: mcpDirPermission === 'granted',
+    everCaptured,
+    bufferCount: buffer.length,
+  });
+
   return (
     <div className="mx-auto max-w-2xl px-6 py-10 font-sans">
       <h1 className="mb-2 text-2xl font-semibold">Claude Code Context Capturer</h1>
       <p className="mb-8 text-sm text-slate-600">Settings &amp; capture buffer</p>
+
+      {onboardingReady && onboardingVisible && (
+        <OnboardingChecklist
+          steps={onboardingSteps}
+          onLinkContext={() => void handleAddRoute()}
+          onDismiss={() => void handleDismissOnboarding()}
+        />
+      )}
 
       <section className="mb-10 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold">Output</h2>
