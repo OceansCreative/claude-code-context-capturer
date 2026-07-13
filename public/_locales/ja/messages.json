@@ -1,0 +1,198 @@
+{
+  "extName": {
+    "message": "Claude Code Context Capturer",
+    "description": "Extension name shown in the Chrome Web Store and toolbar."
+  },
+  "extDescription": {
+    "message": "開いている Web ページをワンクリックで Claude Code 向けの Markdown コンテキストに変換します。",
+    "description": "Extension description shown in the Chrome Web Store."
+  },
+  "commandCapturePage": {
+    "message": "現在のページを Claude Code コンテキストとしてキャプチャ",
+    "description": "Keyboard-shortcut description in chrome://extensions/shortcuts."
+  },
+  "commandCaptureSelection": {
+    "message": "選択したテキストを Claude Code コンテキストとしてキャプチャ"
+  },
+  "contextMenuCapturePage": {
+    "message": "ページを Claude Code コンテキストとしてキャプチャ"
+  },
+  "contextMenuCaptureSelection": {
+    "message": "選択範囲を Claude Code コンテキストとしてキャプチャ"
+  },
+  "offscreenJustification": {
+    "message": "キャプチャした Markdown をユーザーがリンクした CLAUDE.md に追記し、システムのクリップボードへ書き込むため。"
+  },
+
+  "save": { "message": "保存" },
+  "cancel": { "message": "キャンセル" },
+  "close": { "message": "閉じる" },
+  "remove": { "message": "削除" },
+  "removeEntry": { "message": "削除" },
+  "unknownError": { "message": "不明なエラー" },
+  "settings": { "message": "設定" },
+
+  "capturePage": { "message": "ページをキャプチャ" },
+  "captureSelection": { "message": "選択範囲をキャプチャ" },
+  "capturing": { "message": "キャプチャ中…" },
+  "popupOpenSettings": { "message": "設定を開く" },
+  "claudeAiChat": { "message": "claude.ai チャット" },
+  "artifactsOnly": { "message": "アーティファクトのみ" },
+  "artifactsOnlyShortHint": { "message": "Claude が書いたコード／ドキュメントだけをキャプチャ" },
+  "lastNMessages": { "message": "直近 N 件のメッセージ" },
+  "wholeConversationHint": { "message": "0 = 会話全体" },
+  "captured": { "message": "キャプチャしました ✓" },
+  "previewWindowOpened": { "message": "プレビューウィンドウを開きました。内容を確認して確定してください。" },
+  "popupOpenSettingsToRelink": { "message": "設定を開いて CLAUDE.md をリンク／再許可 →" },
+  "recentCaptures": { "message": "最近のキャプチャ" },
+  "manageAllCaptures": { "message": "すべてのキャプチャを管理 →" },
+  "popupShortcuts": {
+    "message": "ショートカット: Ctrl/Cmd+Shift+L（ページ） · Ctrl/Cmd+Shift+K（選択範囲）"
+  },
+
+  "optionsSubtitle": { "message": "設定とキャプチャバッファ" },
+  "outputSectionTitle": { "message": "出力" },
+  "defaultActionLabel": { "message": "デフォルトの動作" },
+  "outputModeClipboard": { "message": "クリップボードにコピー" },
+  "outputModeAppendBuffer": { "message": "拡張機能内のバッファに追記" },
+  "outputModeClaudeMd": { "message": "リンクした CLAUDE.md ファイルに追記" },
+  "outputModeMcpStore": { "message": "MCP コンテキストディレクトリに保存（Claude Code から必要時に取得）" },
+  "outputModeBoth": { "message": "クリップボード + バッファ" },
+  "optIncludeFrontmatter": { "message": "YAML frontmatter を含める" },
+  "optIncludeFrontmatterDesc": {
+    "message": "出力の先頭にメタデータ（URL・タイトル・captured_at）を追加します。"
+  },
+  "optIncludeSourceFooter": { "message": "ソースフッターを含める" },
+  "optIncludeSourceFooterDesc": { "message": "末尾に「Source: …」リンクを追加します。" },
+  "optWrapCodeBlock": { "message": "出力をコードフェンスで囲む" },
+  "optWrapCodeBlockDesc": {
+    "message": "Markdown を自動整形するチャット欄に貼り付けるときに便利です。"
+  },
+  "optPreviewBeforeWrite": { "message": "書き込み前にプレビュー" },
+  "optPreviewBeforeWriteDesc": {
+    "message": "クリップボード / バッファ / CLAUDE.md / MCP ストアへ確定する前に、ナビゲーションメニューなど不要な部分を削れるようプレビューウィンドウを開きます。"
+  },
+  "maxBodyLengthLabel": { "message": "本文の最大文字数（0 = 無制限）" },
+  "localeLabel": { "message": "言語" },
+  "claudeAiConversationsTitle": { "message": "claude.ai の会話" },
+  "claudeAiConversationsHint": { "message": "claude.ai のチャットをキャプチャするときに適用される設定です。" },
+  "optArtifactsOnlyDesc": {
+    "message": "周囲の会話を除き、Claude が書いたコード／ドキュメントだけをきれいなコードブロックとしてキャプチャします。"
+  },
+  "keepLastNLabel": { "message": "直近 N 件のメッセージだけを残す（0 = 会話全体）" },
+  "resetToDefaults": { "message": "デフォルトに戻す" },
+  "savedAt": { "message": "保存しました" },
+
+  "routesTitle": { "message": "コンテキストファイルのルート" },
+  "addRoute": { "message": "+ ルートを追加" },
+  "routesHelp": {
+    "message": "各キャプチャは、URL パターンが最初にマッチしたルートに追記されます。マッチしない URL を受け取るには、ルートを default（空パターン）に設定してください。ワイルドカードには * を使います（例: github.com/anthropic/*）。1 つのルートは複数のファイルに書き込めます。AI エージェントが読むファイル（Claude Code なら CLAUDE.md、Cursor なら .cursorrules や .cursor/rules/*.mdc、Windsurf なら .windsurfrules など）を選び、「+ 別のファイルをリンク」で追加できます。"
+  },
+  "routesEmpty": {
+    "message": "まだルートがリンクされていません。「リンクした CLAUDE.md ファイルに追記」モードのキャプチャは、少なくとも 1 つ追加するまで失敗します。"
+  },
+  "badgeDefault": { "message": "デフォルト" },
+  "badgeWriteGranted": { "message": "書き込み許可済み" },
+  "badgeNeedsRegrant": { "message": "再許可が必要" },
+  "patternLabel": { "message": "パターン:" },
+  "patternDefault": { "message": "（デフォルト）" },
+  "unlink": { "message": "リンク解除" },
+  "unlinkTitle": { "message": "このルートからこのファイルへの書き込みを停止" },
+  "linkAnotherFile": { "message": "+ 別のファイルをリンク（例: .cursorrules、.windsurfrules）" },
+  "regrant": { "message": "再許可" },
+  "editPattern": { "message": "パターンを編集" },
+
+  "mcpDirTitle": { "message": "MCP コンテキストディレクトリ" },
+  "unlinkDir": { "message": "リンク解除" },
+  "linkDirectory": { "message": "ディレクトリをリンク" },
+  "mcpDirHelp": {
+    "message": "「MCP コンテキストディレクトリに保存」出力モードでは、各キャプチャがここに単体の .md ファイルとして書き込まれます。付属の MCP サーバーがそれらを必要に応じて Claude Code へ提供するため、CLAUDE.md を肥大化させずに調べ物や claude.ai の会話を参照できます。"
+  },
+  "mcpDirEmpty": {
+    "message": "まだディレクトリがリンクされていません。「MCP コンテキストディレクトリに保存」モードのキャプチャは、リンクするまで失敗します。"
+  },
+  "mcpHowToSummary": { "message": "Claude Code への接続方法" },
+  "mcpStep1": { "message": "プロジェクト内のディレクトリを選びます（例: .ccc-contexts）。" },
+  "mcpStep2": { "message": "そのディレクトリを指定して MCP サーバーを登録します:" },
+  "mcpStep3": { "message": "Claude Code で list_contexts または search_contexts を実行するよう依頼します。" },
+
+  "captureBufferTitle": { "message": "キャプチャバッファ" },
+  "copyAllAsMarkdown": { "message": "すべて Markdown でコピー" },
+  "clearAll": { "message": "すべてクリア" },
+  "bufferEmpty": { "message": "まだバッファされたキャプチャはありません。" },
+  "footerEnjoying": { "message": "気に入っていただけましたか?" },
+  "footerPowerPackDesc": {
+    "message": "— この拡張機能がコンテキストを供給する parallel-agent ワークフローです。"
+  },
+  "footerLicenseLine": { "message": "MIT ライセンス · 100% ローカル処理" },
+
+  "errNoDirPicker": {
+    "message": "お使いのブラウザは File System Access のディレクトリ選択に対応していません。"
+  },
+  "errCouldNotPickDir": { "message": "ディレクトリを選択できませんでした:" },
+  "errWritePermNotGranted": { "message": "書き込み権限が許可されませんでした。" },
+  "errCouldNotRegrant": { "message": "再許可できませんでした:" },
+  "confirmUnlinkMcpDir": {
+    "message": "MCP コンテキストディレクトリのリンクを解除しますか?ディスク上のキャプチャ済みファイルは削除されません。"
+  },
+  "errNoFsaApi": { "message": "お使いのブラウザは File System Access API に対応していません。" },
+  "filePickerMarkdownDesc": { "message": "Markdown" },
+  "errCouldNotPickFile": { "message": "ファイルを選択できませんでした:" },
+  "promptRouteLabel": { "message": "このルートのラベル" },
+  "promptRoutePatternFirst": {
+    "message": "URL パターン（* をワイルドカードとして使用）。空欄にすると、マッチしない URL のデフォルトルートになります。"
+  },
+  "promptRoutePattern": { "message": "URL パターン（* をワイルドカードとして使用）。例: github.com/anthropic/*" },
+  "errFileAlreadyLinked": { "message": "はこのルートに既にリンクされています。" },
+  "confirmRemoveLastFile": {
+    "message": "これはこのルートの最後のファイルです。ルート全体を削除しますか?"
+  },
+  "confirmRemoveRoute": { "message": "このルートを削除しますか?ディスク上のファイルは削除されません。" },
+  "promptEditPattern": { "message": "新しい URL パターン（空欄 = デフォルトルート）" },
+  "bufferCopied": { "message": "バッファ内のすべてのキャプチャをクリップボードにコピーしました。" },
+  "confirmClearBuffer": { "message": "バッファ内のすべてのキャプチャをクリアしますか?この操作は取り消せません。" },
+
+  "onboardingTitle": { "message": "使ってみる" },
+  "onboardingGotIt": { "message": "完了" },
+  "onboardingDismiss": { "message": "閉じる" },
+  "onboardingIntro": {
+    "message": "Web のコンテキストを AI エージェントに流し込むための 3 つの簡単なステップ"
+  },
+  "onboardingStep1Title": { "message": "コンテキストファイルをリンク" },
+  "onboardingStep1Desc": {
+    "message": "AI エージェントが読むファイル（CLAUDE.md、.cursorrules など）を拡張機能に指定します。すべてのキャプチャがそこに追記されます。（MCP コンテキストディレクトリでも構いません。）"
+  },
+  "onboardingLinkFile": { "message": "ファイルをリンク" },
+  "onboardingStep2Title": { "message": "キャプチャを試す" },
+  "onboardingStep2Desc": {
+    "message": "残しておきたいページ（GitHub の issue、ドキュメント、claude.ai のチャットなど）を開き、Ctrl/⌘+Shift+L を押すかツールバーのアイコンをクリックします。リンクしたファイルに追記されます。"
+  },
+  "onboardingStep3Title": { "message": "準備完了" },
+  "onboardingStep3Desc": {
+    "message": "ツールバーのアイコン、キーボードショートカット（ページは Ctrl/⌘+Shift+L、選択範囲は Ctrl/⌘+Shift+K）、右クリックメニューからいつでもキャプチャできます。"
+  },
+  "readDocs": { "message": "ドキュメントを読む" },
+  "badgeDone": { "message": "完了" },
+
+  "destClipboard": { "message": "システムのクリップボード" },
+  "destBuffer": { "message": "拡張機能内のバッファ" },
+  "destClaudeMd": { "message": "リンクした CLAUDE.md（URL がマッチしたルート）" },
+  "destMcpStore": { "message": "MCP キャプチャディレクトリ" },
+  "destBoth": { "message": "クリップボード + 拡張機能内のバッファ" },
+  "previewLoading": { "message": "キャプチャを読み込み中…" },
+  "previewExpiredTitle": { "message": "このプレビューは期限切れです" },
+  "previewExpiredBody": {
+    "message": "ステージされたキャプチャがセッションストレージに残っていません。通常はサービスワーカーの再起動やブラウザの終了が原因です。もう一度キャプチャを実行すると、新しいプレビューがここに表示されます。"
+  },
+  "previewWriting": { "message": "書き込み中…" },
+  "previewClosing": { "message": "このウィンドウを閉じています…" },
+  "previewWriteFailed": { "message": "書き込みに失敗しました" },
+  "previewParser": { "message": "パーサー:" },
+  "previewDestination": { "message": "書き込み先:" },
+  "chars": { "message": "文字" },
+  "bytes": { "message": "バイト" },
+  "previewVsOriginal": { "message": "（元との差）" },
+  "previewEditableLabel": { "message": "書き込む Markdown（編集可能）" },
+  "previewSkipFuture": { "message": "今後のキャプチャはプレビューをスキップ（設定で再有効化できます）" },
+  "previewConfirmWrite": { "message": "確定して書き込む" }
+}

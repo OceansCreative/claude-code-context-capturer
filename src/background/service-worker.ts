@@ -11,6 +11,7 @@ import {
 } from '@/shared/preview-stage';
 import { buildContextSlug, dedupePrefix } from '@/shared/slug';
 import { buildArtifactFiles } from '@/shared/artifact-file';
+import { t } from '@/shared/i18n';
 import type {
   CapturedContext,
   OffscreenAppendResult,
@@ -45,12 +46,12 @@ chrome.runtime.onInstalled.addListener((details) => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: 'ccc-capture-page',
-      title: 'Capture page as Claude Code context',
+      title: t('contextMenuCapturePage'),
       contexts: ['page'],
     });
     chrome.contextMenus.create({
       id: 'ccc-capture-selection',
-      title: 'Capture selection as Claude Code context',
+      title: t('contextMenuCaptureSelection'),
       contexts: ['selection'],
     });
   });
@@ -444,8 +445,7 @@ async function ensureOffscreen(): Promise<void> {
       // tab; writes from a content-script-injected navigator.clipboard call
       // silently fail in that case).
       reasons: [chrome.offscreen.Reason.BLOBS, chrome.offscreen.Reason.CLIPBOARD],
-      justification:
-        'Append captured Markdown to the user-linked CLAUDE.md file and write to the system clipboard.',
+      justification: t('offscreenJustification'),
     })
     .finally(() => {
       creatingOffscreen = null;

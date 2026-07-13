@@ -2,11 +2,11 @@ import { defineManifest } from '@crxjs/vite-plugin';
 
 export default defineManifest({
   manifest_version: 3,
-  name: 'Claude Code Context Capturer',
+  default_locale: 'en',
+  name: '__MSG_extName__',
   short_name: 'CCC',
   version: '1.2.1',
-  description:
-    'Convert any web page into Claude Code-friendly Markdown context with one click.',
+  description: '__MSG_extDescription__',
   permissions: [
     'activeTab',
     'clipboardWrite',
@@ -49,14 +49,14 @@ export default defineManifest({
         default: 'Ctrl+Shift+L',
         mac: 'Command+Shift+L',
       },
-      description: 'Capture current page as Claude Code context',
+      description: '__MSG_commandCapturePage__',
     },
     'capture-selection': {
       suggested_key: {
         default: 'Ctrl+Shift+K',
         mac: 'Command+Shift+K',
       },
-      description: 'Capture selected text as Claude Code context',
+      description: '__MSG_commandCaptureSelection__',
     },
   },
 });

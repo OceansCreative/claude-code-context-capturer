@@ -1,0 +1,198 @@
+{
+  "extName": {
+    "message": "Claude Code Context Capturer",
+    "description": "Extension name shown in the Chrome Web Store and toolbar."
+  },
+  "extDescription": {
+    "message": "Convert any web page into Claude Code-friendly Markdown context with one click.",
+    "description": "Extension description shown in the Chrome Web Store."
+  },
+  "commandCapturePage": {
+    "message": "Capture current page as Claude Code context",
+    "description": "Keyboard-shortcut description in chrome://extensions/shortcuts."
+  },
+  "commandCaptureSelection": {
+    "message": "Capture selected text as Claude Code context"
+  },
+  "contextMenuCapturePage": {
+    "message": "Capture page as Claude Code context"
+  },
+  "contextMenuCaptureSelection": {
+    "message": "Capture selection as Claude Code context"
+  },
+  "offscreenJustification": {
+    "message": "Append captured Markdown to the user-linked CLAUDE.md file and write to the system clipboard."
+  },
+
+  "save": { "message": "Save" },
+  "cancel": { "message": "Cancel" },
+  "close": { "message": "Close" },
+  "remove": { "message": "Remove" },
+  "removeEntry": { "message": "remove" },
+  "unknownError": { "message": "Unknown error" },
+  "settings": { "message": "Settings" },
+
+  "capturePage": { "message": "Capture page" },
+  "captureSelection": { "message": "Capture selection" },
+  "capturing": { "message": "Capturing…" },
+  "popupOpenSettings": { "message": "Open settings" },
+  "claudeAiChat": { "message": "claude.ai chat" },
+  "artifactsOnly": { "message": "Artifacts only" },
+  "artifactsOnlyShortHint": { "message": "Capture just the code/docs Claude wrote" },
+  "lastNMessages": { "message": "Last N messages" },
+  "wholeConversationHint": { "message": "0 = whole conversation" },
+  "captured": { "message": "Captured ✓" },
+  "previewWindowOpened": { "message": "Preview window opened — review there to confirm." },
+  "popupOpenSettingsToRelink": { "message": "Open settings to link / re-grant CLAUDE.md →" },
+  "recentCaptures": { "message": "Recent captures" },
+  "manageAllCaptures": { "message": "Manage all captures →" },
+  "popupShortcuts": {
+    "message": "Shortcuts: Ctrl/Cmd+Shift+L (page) · Ctrl/Cmd+Shift+K (selection)"
+  },
+
+  "optionsSubtitle": { "message": "Settings & capture buffer" },
+  "outputSectionTitle": { "message": "Output" },
+  "defaultActionLabel": { "message": "Default action" },
+  "outputModeClipboard": { "message": "Copy to clipboard" },
+  "outputModeAppendBuffer": { "message": "Append to in-extension buffer" },
+  "outputModeClaudeMd": { "message": "Append to linked CLAUDE.md file" },
+  "outputModeMcpStore": { "message": "Save to MCP contexts directory (on-demand via Claude Code)" },
+  "outputModeBoth": { "message": "Clipboard + buffer" },
+  "optIncludeFrontmatter": { "message": "Include YAML frontmatter" },
+  "optIncludeFrontmatterDesc": {
+    "message": "Adds metadata (URL, title, captured_at) at the top of the output."
+  },
+  "optIncludeSourceFooter": { "message": "Include source footer" },
+  "optIncludeSourceFooterDesc": { "message": "Adds a 'Source: …' link at the bottom." },
+  "optWrapCodeBlock": { "message": "Wrap output in fenced code block" },
+  "optWrapCodeBlockDesc": {
+    "message": "Useful when pasting into chat windows that auto-format Markdown."
+  },
+  "optPreviewBeforeWrite": { "message": "Preview before write" },
+  "optPreviewBeforeWriteDesc": {
+    "message": "Open a preview window so you can trim navigation menus or other cruft before the capture is committed to clipboard / buffer / CLAUDE.md / MCP store."
+  },
+  "maxBodyLengthLabel": { "message": "Maximum body length (characters, 0 = no limit)" },
+  "localeLabel": { "message": "Locale" },
+  "claudeAiConversationsTitle": { "message": "claude.ai conversations" },
+  "claudeAiConversationsHint": { "message": "Controls applied when capturing a claude.ai chat." },
+  "optArtifactsOnlyDesc": {
+    "message": "Capture just the code/documents Claude wrote (as clean code blocks), dropping the surrounding conversation."
+  },
+  "keepLastNLabel": { "message": "Keep only the last N messages (0 = whole conversation)" },
+  "resetToDefaults": { "message": "Reset to defaults" },
+  "savedAt": { "message": "Saved at" },
+
+  "routesTitle": { "message": "Context file routes" },
+  "addRoute": { "message": "+ Add route" },
+  "routesHelp": {
+    "message": "Each capture is appended to the first route whose URL pattern matches. Mark a route as default (empty pattern) to catch unmatched URLs. Use * as a wildcard, e.g. github.com/anthropic/*. A single route can write to multiple files — pick the one your AI agent reads (CLAUDE.md for Claude Code, .cursorrules or .cursor/rules/*.mdc for Cursor, .windsurfrules for Windsurf, etc.) and add others with \"+ Link another file\"."
+  },
+  "routesEmpty": {
+    "message": "No routes linked yet. Captures with the \"Append to linked CLAUDE.md file\" mode will fail until you add at least one."
+  },
+  "badgeDefault": { "message": "default" },
+  "badgeWriteGranted": { "message": "write granted" },
+  "badgeNeedsRegrant": { "message": "needs re-grant" },
+  "patternLabel": { "message": "pattern:" },
+  "patternDefault": { "message": "(default)" },
+  "unlink": { "message": "unlink" },
+  "unlinkTitle": { "message": "Stop writing this route to this file" },
+  "linkAnotherFile": { "message": "+ Link another file (e.g. .cursorrules, .windsurfrules)" },
+  "regrant": { "message": "Re-grant" },
+  "editPattern": { "message": "Edit pattern" },
+
+  "mcpDirTitle": { "message": "MCP contexts directory" },
+  "unlinkDir": { "message": "Unlink" },
+  "linkDirectory": { "message": "Link directory" },
+  "mcpDirHelp": {
+    "message": "With the \"Save to MCP contexts directory\" output mode, each capture is written as a standalone .md file here. The companion MCP server then exposes these to Claude Code on demand — so your research and claude.ai conversations are available without bloating CLAUDE.md."
+  },
+  "mcpDirEmpty": {
+    "message": "No directory linked yet. Captures in \"Save to MCP contexts directory\" mode will fail until you link one."
+  },
+  "mcpHowToSummary": { "message": "How to connect this to Claude Code" },
+  "mcpStep1": { "message": "Pick a directory inside your project (e.g. .ccc-contexts)." },
+  "mcpStep2": { "message": "Register the MCP server, pointing it at that directory:" },
+  "mcpStep3": { "message": "In Claude Code, ask it to list_contexts or search_contexts." },
+
+  "captureBufferTitle": { "message": "Capture buffer" },
+  "copyAllAsMarkdown": { "message": "Copy all as Markdown" },
+  "clearAll": { "message": "Clear all" },
+  "bufferEmpty": { "message": "No captures buffered yet." },
+  "footerEnjoying": { "message": "Enjoying this?" },
+  "footerPowerPackDesc": {
+    "message": "— the parallel-agent workflow this extension feeds context into."
+  },
+  "footerLicenseLine": { "message": "MIT License · 100% local processing" },
+
+  "errNoDirPicker": {
+    "message": "Your browser does not support the File System Access directory picker."
+  },
+  "errCouldNotPickDir": { "message": "Could not pick directory:" },
+  "errWritePermNotGranted": { "message": "Write permission was not granted." },
+  "errCouldNotRegrant": { "message": "Could not re-grant:" },
+  "confirmUnlinkMcpDir": {
+    "message": "Unlink the MCP contexts directory? Captured files on disk are not deleted."
+  },
+  "errNoFsaApi": { "message": "Your browser does not support the File System Access API." },
+  "filePickerMarkdownDesc": { "message": "Markdown" },
+  "errCouldNotPickFile": { "message": "Could not pick file:" },
+  "promptRouteLabel": { "message": "Label for this route" },
+  "promptRoutePatternFirst": {
+    "message": "URL pattern (use * as wildcard). Leave empty to make this the default route for unmatched URLs."
+  },
+  "promptRoutePattern": { "message": "URL pattern (use * as wildcard), e.g. github.com/anthropic/*" },
+  "errFileAlreadyLinked": { "message": "is already linked to this route." },
+  "confirmRemoveLastFile": {
+    "message": "That is the last file on this route. Remove the whole route?"
+  },
+  "confirmRemoveRoute": { "message": "Remove this route? The file on disk is not deleted." },
+  "promptEditPattern": { "message": "New URL pattern (empty = default route)" },
+  "bufferCopied": { "message": "All buffered captures copied to clipboard." },
+  "confirmClearBuffer": { "message": "Clear all buffered captures? This cannot be undone." },
+
+  "onboardingTitle": { "message": "Get started" },
+  "onboardingGotIt": { "message": "Got it" },
+  "onboardingDismiss": { "message": "Dismiss" },
+  "onboardingIntro": {
+    "message": "Three quick steps to start piping web context into your AI agent"
+  },
+  "onboardingStep1Title": { "message": "Link a context file" },
+  "onboardingStep1Desc": {
+    "message": "Point the extension at the file your AI agent reads — CLAUDE.md, .cursorrules, or similar. Every capture gets appended there. (An MCP contexts directory counts too.)"
+  },
+  "onboardingLinkFile": { "message": "Link a file" },
+  "onboardingStep2Title": { "message": "Try a capture" },
+  "onboardingStep2Desc": {
+    "message": "Open any page worth keeping — a GitHub issue, a docs page, a claude.ai chat — then press Ctrl/⌘+Shift+L or click the toolbar icon. It lands in your linked file."
+  },
+  "onboardingStep3Title": { "message": "You're set" },
+  "onboardingStep3Desc": {
+    "message": "Capture anytime from the toolbar icon, the keyboard shortcuts (Ctrl/⌘+Shift+L for the page, Ctrl/⌘+Shift+K for a selection), or the right-click menu."
+  },
+  "readDocs": { "message": "Read the docs" },
+  "badgeDone": { "message": "done" },
+
+  "destClipboard": { "message": "System clipboard" },
+  "destBuffer": { "message": "In-extension buffer" },
+  "destClaudeMd": { "message": "Linked CLAUDE.md (URL-matched route)" },
+  "destMcpStore": { "message": "MCP captures directory" },
+  "destBoth": { "message": "Clipboard + in-extension buffer" },
+  "previewLoading": { "message": "Loading capture…" },
+  "previewExpiredTitle": { "message": "This preview expired" },
+  "previewExpiredBody": {
+    "message": "The staged capture is no longer in session storage. This usually means the service worker restarted or the browser was closed. Trigger the capture again — the new preview will land here."
+  },
+  "previewWriting": { "message": "Writing…" },
+  "previewClosing": { "message": "Closing this window…" },
+  "previewWriteFailed": { "message": "Write failed" },
+  "previewParser": { "message": "parser:" },
+  "previewDestination": { "message": "destination:" },
+  "chars": { "message": "chars" },
+  "bytes": { "message": "bytes" },
+  "previewVsOriginal": { "message": "vs original" },
+  "previewEditableLabel": { "message": "Markdown to write (editable)" },
+  "previewSkipFuture": { "message": "Skip preview for future captures (re-enable in Options)" },
+  "previewConfirmWrite": { "message": "Confirm & write" }
+}
