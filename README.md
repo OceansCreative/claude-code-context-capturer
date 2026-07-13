@@ -10,7 +10,7 @@
 
 # Claude Code Context Capturer
 
-> Capture web pages as Markdown and append them **directly to your project's context files** — `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, all at once. Multi-project routing by URL pattern. Site-specific parsers for GitHub, Stack Overflow, Hacker News, X/Twitter, Zenn, Qiita, MDN, YouTube, Reddit, and claude.ai conversations.
+> Capture web pages as Markdown and append them **directly to your project's context files** — `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, all at once. Multi-project routing by URL pattern. Site-specific parsers for GitHub, Stack Overflow, Hacker News, X/Twitter, Zenn, Qiita, MDN, YouTube, Reddit, ChatGPT, and claude.ai conversations.
 
 ![hero](docs/screenshots/03-hero.png)
 
@@ -65,6 +65,7 @@ I see the same.
   - **Reddit** *(v1.1.0+)* — post + コメントツリーを JSON API 経由で抽出（不安定な shreddit DOM はスクレイプしない）。selftext / コメント本文は Markdown そのまま、ネストは blockquote で表現、deleted / removed はスキップ、最大 100 コメントで truncation を明記
   - **Hacker News** *(v1.1.0+)* — item ページのストーリー（タイトル / 外部リンク / points / 投稿者 / Ask HN 本文）とコメントツリーを抽出。ネストは blockquote で再現、`[dead]` / `[flagged]` はスキップ、最初の 100 コメントでキャップ
   - **X / Twitter** *(v1.2.0+)* — status ページのスレッドを DOM から抽出（内部 API は叩かない安全設計。`data-testid` セマンティクスのみに依存）。focal tweet + 同一著者のスレッド続き（番号付き）+ 表示中のリプライ（フラット・最大 50 件）をキャプチャ。mention / hashtag / リンクは Markdown リンク化、絵文字は `img alt` から復元、引用ツイートは blockquote、画像 / 動画は `[image: alt]` / `[video]` プレースホルダ、プロモ枠はスキップ。仮想化で未描画のツイートは対象外（スレッドが続く場合はその旨を明記）
+  - **ChatGPT** *(v1.3.0+)* — chatgpt.com（旧 chat.openai.com）の `/c/<id>` 会話ページを内部 API 経由で抽出（不安定な React DOM はスクレイプしない）。`/api/auth/session` の accessToken で `/backend-api/conversation/<id>` を叩き、`mapping` ノードグラフを `current_node` から root へ辿って可視ブランチを時系列復元。user / assistant のターンを保持、code はコードフェンス、multimodal は `[image]` プレースホルダ、tool 呼び出しはコンパクトに整形。system / 非表示メッセージはスキップ、model slug をタグ化、同一会話の再キャプチャは上書き更新。ログアウト時は再ログインを促すフレンドリーなエラー
   - その他のサイトは Mozilla Readability で本文抽出
 - **メタ情報の埋め込み**：URL・タイトル・取得日時を YAML frontmatter で付与
 - **CLAUDE.md への直書き** *(v0.2.0+)*：プロジェクトの `CLAUDE.md` を一度ピックすれば、以降のキャプチャは File System Access API 経由で自動 append。コピペ不要
@@ -102,7 +103,7 @@ I see the same.
 | クリップボードに出力 | ✓ | ✓ | ✓ | ✓ |
 | **プロジェクトの実ファイル `CLAUDE.md` に直接書き込み** | ✗ | ✗（独自 Vault） | ✗ | **✓** |
 | **URL パターンで複数ファイルに振り分け** | ✗ | ✗ | ✗ | **✓** |
-| GitHub / Stack Overflow / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
+| GitHub / Stack Overflow / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit / ChatGPT サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
 | **claude.ai 会話キャプチャ（thinking / tool_use / branch 保持）** | ✗ | ✗ | ✗ | **✓** |
 | 100% ローカル処理・完全 OSS | ✓ | ✗（SaaS） | ✓ | ✓ |
 
@@ -261,7 +262,7 @@ Honestly, several Web→Markdown extensions already exist: **[LLMFeeder](https:/
 | Clipboard output | ✓ | ✓ | ✓ | ✓ |
 | **Direct write to your project's `CLAUDE.md`** | ✗ | ✗ (own vault) | ✗ | **✓** |
 | **URL-pattern routing to multiple files** | ✗ | ✗ | ✗ | **✓** |
-| Site-specific parsers (GitHub / SO / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit) | ✗ | partial | ✗ | **✓** |
+| Site-specific parsers (GitHub / SO / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit / ChatGPT) | ✗ | partial | ✗ | **✓** |
 | **claude.ai conversation capture (thinking / tool_use / branches preserved)** | ✗ | ✗ | ✗ | **✓** |
 | 100% local, fully OSS | ✓ | ✗ (SaaS) | ✓ | ✓ |
 
@@ -275,6 +276,7 @@ In short: a clipper purpose-built for AI agent context files. If you want a gene
 - **Reddit thread capture** *(v1.1.0+)* — captures the post + comment tree via Reddit's JSON API (no scraping of the unstable shreddit DOM). Selftext and comment bodies pass through as native Markdown, replies nest as blockquotes, deleted/removed comments are skipped, and megathreads are capped at 100 comments with an explicit truncation note
 - **Hacker News thread capture** *(v1.1.0+)* — captures the story (title / external link / points / author / Ask HN text) plus the comment tree with nesting rendered as blockquotes, skipping `[dead]` / `[flagged]` and capping at the first 100 comments
 - **X / Twitter thread capture** *(v1.2.0+)* — captures a status page's visible thread from the DOM (no internal API calls — safe for your account; anchored on `data-testid` semantics, never obfuscated class names). Gets the focal tweet, same-author thread continuations as a numbered sequence, and visible replies flat (capped at 50). Mentions / hashtags / links become Markdown links, emoji are restored from `img alt`, quote tweets render as blockquotes, media becomes `[image: alt]` / `[video]` placeholders, and promoted content is skipped. Tweets X hasn't rendered (virtualized away) aren't captured — a note is added when the thread continues
+- **ChatGPT conversation capture** *(v1.3.0+)* — captures a chatgpt.com (or legacy chat.openai.com) `/c/<id>` conversation via the internal API instead of scraping the unstable React DOM. Uses the `accessToken` from `/api/auth/session` to call `/backend-api/conversation/<id>`, then walks the `mapping` node graph from `current_node` back to root to reconstruct the visible branch in order. User/assistant turns are preserved, code renders as fenced blocks, multimodal parts become `[image]` placeholders, and tool calls render compactly. System and hidden messages are skipped, the model slug becomes a tag, and re-capturing the same conversation updates it in place. Logged out? A friendly hint tells you to log in and retry
 - **YAML frontmatter** with URL, title, captured_at, author, tags
 - **Direct CLAUDE.md write** *(v0.2.0+)* — Link a `CLAUDE.md` once via the File System Access API; subsequent captures append directly, no copy/paste
 - **Multi-project routing** *(v0.3.0+)* — Link multiple `CLAUDE.md` files with URL glob patterns. Captures from `github.com/anthropic/*` go to one file, `zenn.dev/*` to another, unmatched URLs to a default route
