@@ -6,6 +6,14 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.0 — ChatGPT support + Japanese UI + guided onboarding
+
+- **New:** ChatGPT conversation parser. Captures a chatgpt.com / chat.openai.com conversation through ChatGPT's internal API (session token → `backend-api/conversation`), walking the mapping tree from `current_node` — mirroring the claude.ai parser's approach. Site-specific parsers now cover **GitHub / Stack Overflow / Zenn / Qiita / MDN / YouTube / Reddit / Hacker News / X (Twitter) / claude.ai / ChatGPT** — 11 sources.
+- **New:** First-run onboarding checklist. On first install the options page opens with a 3-step checklist (link a context file → try a capture → you're set) that auto-checks itself from real state across all output modes. Aimed at silent churn — the "installed but never linked" drop-off.
+- **New:** UI internationalization (English + Japanese). `chrome.i18n`-based localization of the popup, options, onboarding, preview, context menus, and manifest — 132 message keys per locale, English as the default with full Japanese translations. The `_locales/en` and `_locales/ja` message bundles ship in this package and Chrome picks the locale automatically from the browser language.
+- Permissions unchanged from v1.2.1 — `chrome.i18n` needs no permission and ChatGPT is covered by the existing `<all_urls>` host permission. 225/225 unit tests pass (+41 vs v1.2.1).
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.3.0) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v1.2.1...v1.3.0)
+
 ## v1.2.1 — New logo (A2)
 
 - **New logo.** The extension icons are redesigned: coral capture-frame corner brackets around a cream `>` + coral `_` terminal prompt on warm charcoal (#262421 / #D97757 / #F0EEE6) — "capture the web for your CLI agent" in one mark. The 128/48/32px sizes carry the full design; 16px is a simplified `>_` toolbar variant. SVG sources live in `docs/brand/`. The new icon reaches the toolbar and the Web Store listing via this package.

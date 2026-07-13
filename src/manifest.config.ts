@@ -5,7 +5,7 @@ export default defineManifest({
   default_locale: 'en',
   name: '__MSG_extName__',
   short_name: 'CCC',
-  version: '1.2.1',
+  version: '1.3.0',
   description: '__MSG_extDescription__',
   permissions: [
     'activeTab',
