@@ -66,6 +66,7 @@ export type ParserName =
   | 'mdn'
   | 'claude-ai'
   | 'claude-ai-artifact'
+  | 'chatgpt'
   | 'youtube'
   | 'reddit'
   | 'hackernews'
