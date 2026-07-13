@@ -29,6 +29,7 @@ import {
   type OutputMode,
   type UserOptions,
 } from '@/shared/types';
+import { t } from '@/shared/i18n';
 
 interface RouteRow extends ClaudeMdRoute {
   /** Aggregate permission: 'granted' iff every handle is granted. */
@@ -84,7 +85,7 @@ export default function App() {
 
   async function handleLinkMcpDir() {
     if (!('showDirectoryPicker' in window)) {
-      alert('Your browser does not support the File System Access directory picker.');
+      alert(t('errNoDirPicker'));
       return;
     }
     let dir: FileSystemDirectoryHandle;
@@ -93,12 +94,12 @@ export default function App() {
       dir = await window.showDirectoryPicker({ mode: 'readwrite' });
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      alert(`Could not pick directory: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`${t('errCouldNotPickDir')} ${err instanceof Error ? err.message : String(err)}`);
       return;
     }
     const perm = await dir.requestPermission({ mode: 'readwrite' });
     if (perm !== 'granted') {
-      alert('Write permission was not granted.');
+      alert(t('errWritePermNotGranted'));
       return;
     }
     await saveMcpDir(dir);
@@ -112,12 +113,12 @@ export default function App() {
       await dir.requestPermission({ mode: 'readwrite' });
       await refreshMcpDir();
     } catch (err) {
-      alert(`Could not re-grant: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`${t('errCouldNotRegrant')} ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
   async function handleUnlinkMcpDir() {
-    if (!confirm('Unlink the MCP contexts directory? Captured files on disk are not deleted.')) {
+    if (!confirm(t('confirmUnlinkMcpDir'))) {
       return;
     }
     await clearMcpDir();
@@ -155,33 +156,33 @@ export default function App() {
 
   async function handleAddRoute() {
     if (!('showOpenFilePicker' in window)) {
-      alert('Your browser does not support the File System Access API.');
+      alert(t('errNoFsaApi'));
       return;
     }
     let handle: FileSystemFileHandle;
     try {
       [handle] = await window.showOpenFilePicker({
-        types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown'] } }],
+        types: [
+          { description: t('filePickerMarkdownDesc'), accept: { 'text/markdown': ['.md', '.markdown'] } },
+        ],
         multiple: false,
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      alert(`Could not pick file: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`${t('errCouldNotPickFile')} ${err instanceof Error ? err.message : String(err)}`);
       return;
     }
 
     const perm = await handle.requestPermission({ mode: 'readwrite' });
     if (perm !== 'granted') {
-      alert('Write permission was not granted.');
+      alert(t('errWritePermNotGranted'));
       return;
     }
 
-    const label = (prompt('Label for this route', handle.name) ?? '').trim() || handle.name;
+    const label = (prompt(t('promptRouteLabel'), handle.name) ?? '').trim() || handle.name;
     const isFirst = routes.length === 0;
     const patternInput = prompt(
-      isFirst
-        ? 'URL pattern (use * as wildcard). Leave empty to make this the default route for unmatched URLs.'
-        : 'URL pattern (use * as wildcard), e.g. github.com/anthropic/*',
+      isFirst ? t('promptRoutePatternFirst') : t('promptRoutePattern'),
       ''
     );
     if (patternInput === null) return; // user cancelled
@@ -210,7 +211,7 @@ export default function App() {
   /** v0.9.0+: append another target file to an existing route. */
   async function handleAddHandleToRoute(routeId: string) {
     if (!('showOpenFilePicker' in window)) {
-      alert('Your browser does not support the File System Access API.');
+      alert(t('errNoFsaApi'));
       return;
     }
     const r = routes.find((x) => x.id === routeId);
@@ -219,17 +220,19 @@ export default function App() {
     let handle: FileSystemFileHandle;
     try {
       [handle] = await window.showOpenFilePicker({
-        types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown'] } }],
+        types: [
+          { description: t('filePickerMarkdownDesc'), accept: { 'text/markdown': ['.md', '.markdown'] } },
+        ],
         multiple: false,
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      alert(`Could not pick file: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`${t('errCouldNotPickFile')} ${err instanceof Error ? err.message : String(err)}`);
       return;
     }
     const perm = await handle.requestPermission({ mode: 'readwrite' });
     if (perm !== 'granted') {
-      alert('Write permission was not granted.');
+      alert(t('errWritePermNotGranted'));
       return;
     }
     // Reject the same file twice — comparing by name is loose but
@@ -238,12 +241,12 @@ export default function App() {
     for (const existing of r.handles) {
       try {
         if (await existing.isSameEntry?.(handle)) {
-          alert(`"${handle.name}" is already linked to this route.`);
+          alert(`"${handle.name}" ${t('errFileAlreadyLinked')}`);
           return;
         }
       } catch {
         if (existing.name === handle.name) {
-          alert(`"${handle.name}" is already linked to this route.`);
+          alert(`"${handle.name}" ${t('errFileAlreadyLinked')}`);
           return;
         }
       }
@@ -258,7 +261,7 @@ export default function App() {
     if (!r) return;
     const nextHandles = r.handles.filter((_, i) => i !== idx);
     if (nextHandles.length === 0) {
-      if (!confirm('That is the last file on this route. Remove the whole route?')) return;
+      if (!confirm(t('confirmRemoveLastFile'))) return;
       await deleteRoute(r.id);
     } else {
       await saveRoute({ ...r, handles: nextHandles });
@@ -267,7 +270,7 @@ export default function App() {
   }
 
   async function handleRemoveRoute(id: string) {
-    if (!confirm('Remove this route? The file on disk is not deleted.')) return;
+    if (!confirm(t('confirmRemoveRoute'))) return;
     await deleteRoute(id);
     await refreshRoutes();
   }
@@ -284,14 +287,14 @@ export default function App() {
       }
       await refreshRoutes();
     } catch (err) {
-      alert(`Could not re-grant: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`${t('errCouldNotRegrant')} ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
   async function handleEditPattern(id: string) {
     const r = routes.find((x) => x.id === id);
     if (!r) return;
-    const next = prompt('New URL pattern (empty = default route)', r.pattern);
+    const next = prompt(t('promptEditPattern'), r.pattern);
     if (next === null) return;
     const trimmed = next.trim();
     const becomingDefault = trimmed === '';
@@ -327,11 +330,11 @@ export default function App() {
     const md = await exportBufferAsMarkdown();
     if (!md) return;
     await navigator.clipboard.writeText(md);
-    alert('All buffered captures copied to clipboard.');
+    alert(t('bufferCopied'));
   }
 
   async function handleClearBuffer() {
-    if (!confirm('Clear all buffered captures? This cannot be undone.')) return;
+    if (!confirm(t('confirmClearBuffer'))) return;
     await clearBuffer();
     await refreshBuffer();
   }
@@ -353,8 +356,8 @@ export default function App() {
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10 font-sans">
-      <h1 className="mb-2 text-2xl font-semibold">Claude Code Context Capturer</h1>
-      <p className="mb-8 text-sm text-slate-600">Settings &amp; capture buffer</p>
+      <h1 className="mb-2 text-2xl font-semibold">{t('extName')}</h1>
+      <p className="mb-8 text-sm text-slate-600">{t('optionsSubtitle')}</p>
 
       {onboardingReady && onboardingVisible && (
         <OnboardingChecklist
@@ -365,9 +368,9 @@ export default function App() {
       )}
 
       <section className="mb-10 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold">Output</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t('outputSectionTitle')}</h2>
 
-        <Field label="Default action">
+        <Field label={t('defaultActionLabel')}>
           <select
             value={options.defaultMode}
             onChange={(e) =>
@@ -375,42 +378,40 @@ export default function App() {
             }
             className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
           >
-            <option value="clipboard">Copy to clipboard</option>
-            <option value="append-buffer">Append to in-extension buffer</option>
-            <option value="claude-md">Append to linked CLAUDE.md file</option>
-            <option value="mcp-store">
-              Save to MCP contexts directory (on-demand via Claude Code)
-            </option>
-            <option value="both">Clipboard + buffer</option>
+            <option value="clipboard">{t('outputModeClipboard')}</option>
+            <option value="append-buffer">{t('outputModeAppendBuffer')}</option>
+            <option value="claude-md">{t('outputModeClaudeMd')}</option>
+            <option value="mcp-store">{t('outputModeMcpStore')}</option>
+            <option value="both">{t('outputModeBoth')}</option>
           </select>
         </Field>
 
         <Toggle
-          label="Include YAML frontmatter"
-          description="Adds metadata (URL, title, captured_at) at the top of the output."
+          label={t('optIncludeFrontmatter')}
+          description={t('optIncludeFrontmatterDesc')}
           checked={options.includeFrontmatter}
           onChange={(v) => setOptions({ ...options, includeFrontmatter: v })}
         />
         <Toggle
-          label="Include source footer"
-          description="Adds a 'Source: …' link at the bottom."
+          label={t('optIncludeSourceFooter')}
+          description={t('optIncludeSourceFooterDesc')}
           checked={options.includeSourceFooter}
           onChange={(v) => setOptions({ ...options, includeSourceFooter: v })}
         />
         <Toggle
-          label="Wrap output in fenced code block"
-          description="Useful when pasting into chat windows that auto-format Markdown."
+          label={t('optWrapCodeBlock')}
+          description={t('optWrapCodeBlockDesc')}
           checked={options.wrapInCodeBlock}
           onChange={(v) => setOptions({ ...options, wrapInCodeBlock: v })}
         />
         <Toggle
-          label="Preview before write"
-          description="Open a preview window so you can trim navigation menus or other cruft before the capture is committed to clipboard / buffer / CLAUDE.md / MCP store."
+          label={t('optPreviewBeforeWrite')}
+          description={t('optPreviewBeforeWriteDesc')}
           checked={options.previewBeforeWrite}
           onChange={(v) => setOptions({ ...options, previewBeforeWrite: v })}
         />
 
-        <Field label="Maximum body length (characters, 0 = no limit)">
+        <Field label={t('maxBodyLengthLabel')}>
           <input
             type="number"
             min={0}
@@ -425,7 +426,7 @@ export default function App() {
           />
         </Field>
 
-        <Field label="Locale">
+        <Field label={t('localeLabel')}>
           <select
             value={options.locale}
             onChange={(e) =>
@@ -443,20 +444,20 @@ export default function App() {
 
         <div className="mt-6 border-t border-slate-100 pt-5">
           <h3 className="mb-1 text-sm font-semibold text-slate-700">
-            claude.ai conversations
+            {t('claudeAiConversationsTitle')}
           </h3>
           <p className="mb-3 text-xs text-slate-500">
-            Controls applied when capturing a claude.ai chat.
+            {t('claudeAiConversationsHint')}
           </p>
 
           <Toggle
-            label="Artifacts only"
-            description="Capture just the code/documents Claude wrote (as clean code blocks), dropping the surrounding conversation."
+            label={t('artifactsOnly')}
+            description={t('optArtifactsOnlyDesc')}
             checked={options.claudeAiArtifactsOnly}
             onChange={(v) => setOptions({ ...options, claudeAiArtifactsOnly: v })}
           />
 
-          <Field label="Keep only the last N messages (0 = whole conversation)">
+          <Field label={t('keepLastNLabel')}>
             <input
               type="number"
               min={0}
@@ -478,17 +479,17 @@ export default function App() {
             onClick={() => void handleSave()}
             className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
           >
-            Save
+            {t('save')}
           </button>
           <button
             type="button"
             onClick={() => void handleReset()}
             className="rounded border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
           >
-            Reset to defaults
+            {t('resetToDefaults')}
           </button>
           {savedAt && (
-            <span className="text-xs text-slate-500">Saved at {savedAt}</span>
+            <span className="text-xs text-slate-500">{t('savedAt')} {savedAt}</span>
           )}
         </div>
       </section>
@@ -496,36 +497,20 @@ export default function App() {
       <section className="mb-10 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-lg font-semibold">
-            Context file routes ({routes.length})
+            {t('routesTitle')} ({routes.length})
           </h2>
           <button
             type="button"
             onClick={() => void handleAddRoute()}
             className="rounded bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
           >
-            + Add route
+            {t('addRoute')}
           </button>
         </div>
-        <p className="mb-4 text-xs text-slate-500">
-          Each capture is appended to the first route whose URL pattern matches.
-          Mark a route as <em>default</em> (empty pattern) to catch unmatched URLs.
-          Use <code className="rounded bg-slate-100 px-1">*</code> as a wildcard,
-          e.g. <code className="rounded bg-slate-100 px-1">github.com/anthropic/*</code>.
-          A single route can write to multiple files — pick the one your AI
-          agent reads (<code className="rounded bg-slate-100 px-1">CLAUDE.md</code>
-          for Claude Code,
-          <code className="rounded bg-slate-100 px-1"> .cursorrules</code> or
-          <code className="rounded bg-slate-100 px-1"> .cursor/rules/*.mdc</code>
-          for Cursor,
-          <code className="rounded bg-slate-100 px-1"> .windsurfrules</code> for
-          Windsurf, etc.) and add others with &ldquo;+ Link another file&rdquo;.
-        </p>
+        <p className="mb-4 text-xs text-slate-500">{t('routesHelp')}</p>
 
         {routes.length === 0 ? (
-          <p className="text-sm text-slate-500">
-            No routes linked yet. Captures with the &ldquo;Append to linked
-            CLAUDE.md file&rdquo; mode will fail until you add at least one.
-          </p>
+          <p className="text-sm text-slate-500">{t('routesEmpty')}</p>
         ) : (
           <ul className="divide-y divide-slate-100">
             {routes.map((r) => (
@@ -536,7 +521,7 @@ export default function App() {
                       <span className="font-medium text-slate-900">{r.label}</span>
                       {r.isDefault && (
                         <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-700">
-                          default
+                          {t('badgeDefault')}
                         </span>
                       )}
                       <span
@@ -547,14 +532,14 @@ export default function App() {
                             : 'bg-amber-100 text-amber-700')
                         }
                       >
-                        {r.permission === 'granted' ? 'write granted' : 'needs re-grant'}
+                        {r.permission === 'granted' ? t('badgeWriteGranted') : t('badgeNeedsRegrant')}
                       </span>
                     </div>
                     <div className="mt-1 text-xs text-slate-500">
                       <div className="mb-1">
-                        pattern:{' '}
+                        {t('patternLabel')}{' '}
                         <code className="rounded bg-slate-100 px-1">
-                          {r.pattern || '(default)'}
+                          {r.pattern || t('patternDefault')}
                         </code>
                       </div>
                       <ul className="space-y-1">
@@ -563,7 +548,7 @@ export default function App() {
                             <code className="truncate rounded bg-slate-100 px-1">{h.name}</code>
                             {h.permission !== 'granted' && (
                               <span className="rounded bg-amber-100 px-1 text-[10px] font-semibold uppercase text-amber-700">
-                                needs re-grant
+                                {t('badgeNeedsRegrant')}
                               </span>
                             )}
                             {r.handles.length > 1 && (
@@ -571,9 +556,9 @@ export default function App() {
                                 type="button"
                                 onClick={() => void handleRemoveHandleFromRoute(r.id, idx)}
                                 className="text-[10px] text-slate-400 hover:text-rose-600"
-                                title="Stop writing this route to this file"
+                                title={t('unlinkTitle')}
                               >
-                                unlink
+                                {t('unlink')}
                               </button>
                             )}
                           </li>
@@ -584,7 +569,7 @@ export default function App() {
                         onClick={() => void handleAddHandleToRoute(r.id)}
                         className="mt-1 text-[11px] text-slate-600 underline hover:text-slate-900"
                       >
-                        + Link another file (e.g. .cursorrules, .windsurfrules)
+                        {t('linkAnotherFile')}
                       </button>
                     </div>
                   </div>
@@ -595,7 +580,7 @@ export default function App() {
                         onClick={() => void handleRegrant(r.id)}
                         className="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50"
                       >
-                        Re-grant
+                        {t('regrant')}
                       </button>
                     )}
                     <button
@@ -603,14 +588,14 @@ export default function App() {
                       onClick={() => void handleEditPattern(r.id)}
                       className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100"
                     >
-                      Edit pattern
+                      {t('editPattern')}
                     </button>
                     <button
                       type="button"
                       onClick={() => void handleRemoveRoute(r.id)}
                       className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
                     >
-                      Remove
+                      {t('remove')}
                     </button>
                   </div>
                 </div>
@@ -622,14 +607,14 @@ export default function App() {
 
       <section className="mb-10 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">MCP contexts directory</h2>
+          <h2 className="text-lg font-semibold">{t('mcpDirTitle')}</h2>
           {mcpDirName ? (
             <button
               type="button"
               onClick={() => void handleUnlinkMcpDir()}
               className="rounded border border-rose-300 px-3 py-1.5 text-xs text-rose-700 hover:bg-rose-50"
             >
-              Unlink
+              {t('unlinkDir')}
             </button>
           ) : (
             <button
@@ -637,19 +622,11 @@ export default function App() {
               onClick={() => void handleLinkMcpDir()}
               className="rounded bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
             >
-              Link directory
+              {t('linkDirectory')}
             </button>
           )}
         </div>
-        <p className="mb-4 text-xs text-slate-500">
-          With the <strong>&ldquo;Save to MCP contexts directory&rdquo;</strong>{' '}
-          output mode, each capture is written as a standalone{' '}
-          <code className="rounded bg-slate-100 px-1">.md</code> file here. The
-          companion MCP server then exposes these to Claude Code{' '}
-          <strong>on demand</strong> — so your research and claude.ai
-          conversations are available without bloating{' '}
-          <code className="rounded bg-slate-100 px-1">CLAUDE.md</code>.
-        </p>
+        <p className="mb-4 text-xs text-slate-500">{t('mcpDirHelp')}</p>
 
         {mcpDirName ? (
           <div className="flex items-center gap-2">
@@ -664,7 +641,7 @@ export default function App() {
                   : 'bg-amber-100 text-amber-700')
               }
             >
-              {mcpDirPermission === 'granted' ? 'write granted' : 'needs re-grant'}
+              {mcpDirPermission === 'granted' ? t('badgeWriteGranted') : t('badgeNeedsRegrant')}
             </span>
             {mcpDirPermission !== 'granted' && (
               <button
@@ -677,33 +654,24 @@ export default function App() {
             )}
           </div>
         ) : (
-          <p className="text-sm text-slate-500">
-            No directory linked yet. Captures in &ldquo;Save to MCP contexts
-            directory&rdquo; mode will fail until you link one.
-          </p>
+          <p className="text-sm text-slate-500">{t('mcpDirEmpty')}</p>
         )}
 
         <details className="mt-4 text-xs text-slate-500">
           <summary className="cursor-pointer font-medium text-slate-600">
-            How to connect this to Claude Code
+            {t('mcpHowToSummary')}
           </summary>
           <ol className="ml-4 mt-2 list-decimal space-y-1">
+            <li>{t('mcpStep1')}</li>
             <li>
-              Pick a directory inside your project (e.g.{' '}
-              <code className="rounded bg-slate-100 px-1">.ccc-contexts</code>).
-            </li>
-            <li>
-              Register the MCP server, pointing it at that directory:
+              {t('mcpStep2')}
               <pre className="mt-1 overflow-x-auto rounded bg-slate-900 px-3 py-2 text-[11px] text-slate-100">
 {`claude mcp add ccc-contexts \\
   -- npx -y claude-code-context-capturer-mcp \\
   ./.ccc-contexts`}
               </pre>
             </li>
-            <li>
-              In Claude Code, ask it to{' '}
-              <em>list_contexts</em> or <em>search_contexts</em>.
-            </li>
+            <li>{t('mcpStep3')}</li>
           </ol>
         </details>
       </section>
@@ -711,7 +679,7 @@ export default function App() {
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">
-            Capture buffer ({buffer.length})
+            {t('captureBufferTitle')} ({buffer.length})
           </h2>
           <div className="flex gap-2">
             <button
@@ -720,7 +688,7 @@ export default function App() {
               disabled={buffer.length === 0}
               className="rounded border border-slate-300 px-3 py-1.5 text-xs hover:bg-slate-100 disabled:opacity-50"
             >
-              Copy all as Markdown
+              {t('copyAllAsMarkdown')}
             </button>
             <button
               type="button"
@@ -728,13 +696,13 @@ export default function App() {
               disabled={buffer.length === 0}
               className="rounded border border-rose-300 px-3 py-1.5 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-50"
             >
-              Clear all
+              {t('clearAll')}
             </button>
           </div>
         </div>
 
         {buffer.length === 0 ? (
-          <p className="text-sm text-slate-500">No captures buffered yet.</p>
+          <p className="text-sm text-slate-500">{t('bufferEmpty')}</p>
         ) : (
           <ul className="divide-y divide-slate-100">
             {buffer.map((entry) => (
@@ -760,7 +728,7 @@ export default function App() {
                   onClick={() => void handleRemoveEntry(entry.id)}
                   className="text-xs text-slate-400 hover:text-rose-600"
                 >
-                  remove
+                  {t('removeEntry')}
                 </button>
               </li>
             ))}
@@ -770,7 +738,7 @@ export default function App() {
 
       <footer className="mt-10 border-t border-slate-100 pt-4 text-center text-xs text-slate-400">
         <p>
-          Enjoying this?{' '}
+          {t('footerEnjoying')}{' '}
           <a
             href="https://oceanscreative.lemonsqueezy.com/checkout/buy/145f2e53-a428-4b5e-b5a8-3cb4f7a740b0?utm_source=cccc-ext&utm_medium=options"
             target="_blank"
@@ -779,7 +747,7 @@ export default function App() {
           >
             Claude Code Power Pack ($29)
           </a>{' '}
-          — the parallel-agent workflow this extension feeds context into.
+          {t('footerPowerPackDesc')}
         </p>
         <p className="mt-1">
           <a
@@ -790,7 +758,7 @@ export default function App() {
           >
             GitHub
           </a>{' '}
-          · MIT License · 100% local processing
+          · {t('footerLicenseLine')}
         </p>
       </footer>
     </div>

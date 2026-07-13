@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { RuntimeMessage, UserOptions } from '@/shared/types';
 import { readBuffer, type BufferEntry } from '@/shared/buffer-storage';
 import { loadOptions, saveOptions } from '@/shared/options-storage';
+import { t } from '@/shared/i18n';
 
 type Status = 'idle' | 'capturing' | 'success' | 'preview-pending' | 'error';
 
@@ -78,15 +79,15 @@ export default function App() {
     <div className="w-[340px] p-4 font-sans">
       <header className="mb-4 flex items-center justify-between">
         <h1 className="text-base font-semibold text-slate-900">
-          Claude Code Context Capturer
+          {t('extName')}
         </h1>
         <button
           type="button"
-          aria-label="Open settings"
+          aria-label={t('popupOpenSettings')}
           onClick={openOptions}
           className="text-xs text-slate-500 hover:text-slate-700"
         >
-          ⚙ Settings
+          ⚙ {t('settings')}
         </button>
       </header>
 
@@ -97,7 +98,7 @@ export default function App() {
           disabled={status === 'capturing'}
           className="w-full rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-60"
         >
-          {status === 'capturing' ? 'Capturing…' : 'Capture page'}
+          {status === 'capturing' ? t('capturing') : t('capturePage')}
         </button>
         <button
           type="button"
@@ -105,21 +106,21 @@ export default function App() {
           disabled={status === 'capturing'}
           className="w-full rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-100 disabled:opacity-60"
         >
-          Capture selection
+          {t('captureSelection')}
         </button>
       </div>
 
       {isClaudeAi && options && (
         <section className="mt-3 rounded border border-violet-200 bg-violet-50 p-2.5">
           <h2 className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-violet-700">
-            <span aria-hidden>✦</span> claude.ai chat
+            <span aria-hidden>✦</span> {t('claudeAiChat')}
           </h2>
 
           <label className="flex cursor-pointer items-center justify-between gap-2 text-xs text-slate-700">
             <span>
-              <span className="font-medium">Artifacts only</span>
+              <span className="font-medium">{t('artifactsOnly')}</span>
               <span className="block text-[10px] text-slate-500">
-                Capture just the code/docs Claude wrote
+                {t('artifactsOnlyShortHint')}
               </span>
             </span>
             <input
@@ -134,9 +135,9 @@ export default function App() {
 
           <label className="mt-2 flex items-center justify-between gap-2 text-xs text-slate-700">
             <span>
-              <span className="font-medium">Last N messages</span>
+              <span className="font-medium">{t('lastNMessages')}</span>
               <span className="block text-[10px] text-slate-500">
-                0 = whole conversation
+                {t('wholeConversationHint')}
               </span>
             </span>
             <input
@@ -157,12 +158,12 @@ export default function App() {
 
       {status === 'success' && (
         <p className="mt-3 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
-          Captured ✓
+          {t('captured')}
         </p>
       )}
       {status === 'preview-pending' && (
         <p className="mt-3 rounded bg-sky-50 px-2 py-1 text-xs text-sky-700">
-          Preview window opened — review there to confirm.
+          {t('previewWindowOpened')}
         </p>
       )}
       {status === 'error' && errorMessage && (
@@ -174,7 +175,7 @@ export default function App() {
               onClick={openOptions}
               className="mt-1 underline hover:text-rose-900"
             >
-              Open settings to link / re-grant CLAUDE.md →
+              {t('popupOpenSettingsToRelink')}
             </button>
           )}
         </div>
@@ -183,7 +184,7 @@ export default function App() {
       {buffer.length > 0 && (
         <section className="mt-4 border-t border-slate-200 pt-3">
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Recent captures ({buffer.length})
+            {t('recentCaptures')} ({buffer.length})
           </h2>
           <ul className="space-y-1.5">
             {buffer.slice(0, 5).map((entry) => (
@@ -208,13 +209,13 @@ export default function App() {
             onClick={openOptions}
             className="mt-2 text-xs text-slate-500 underline hover:text-slate-700"
           >
-            Manage all captures →
+            {t('manageAllCaptures')}
           </button>
         </section>
       )}
 
       <footer className="mt-4 border-t border-slate-200 pt-3 text-[10px] text-slate-400">
-        Shortcuts: Ctrl/Cmd+Shift+L (page) · Ctrl/Cmd+Shift+K (selection)
+        {t('popupShortcuts')}
       </footer>
     </div>
   );
