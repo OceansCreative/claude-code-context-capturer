@@ -1,6 +1,6 @@
 import { buildFrontmatter, buildSourceFooter } from '@/shared/frontmatter-builder';
 import { loadOptions, saveOptions, markCaptured } from '@/shared/options-storage';
-import { appendToBuffer } from '@/shared/buffer-storage';
+import { appendToBuffer, readBuffer } from '@/shared/buffer-storage';
 import { buildEntryHeading } from '@/shared/file-appender';
 import { listRoutes } from '@/shared/handle-store';
 import { resolveRoute } from '@/shared/route-matcher';
@@ -128,6 +128,27 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResp
   }
   if (message.type === 'PREVIEW_CANCEL') {
     void removeStagedCapture(message.stageId).then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (message.type === 'RECOPY_BUFFER_ENTRY') {
+    void (async () => {
+      try {
+        const entry = (await readBuffer()).find((e) => e.id === message.id);
+        if (!entry) {
+          sendResponse({ ok: false, error: 'Capture not found in buffer.' });
+          return;
+        }
+        // Reuse the capture pipeline's clipboard path: offscreen document,
+        // so the write doesn't depend on the popup keeping focus.
+        await writeToClipboardViaOffscreen(entry.markdown);
+        sendResponse({ ok: true });
+      } catch (err) {
+        sendResponse({
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    })();
     return true;
   }
   if (message.type === 'CAPTURE_PAGE' || message.type === 'CAPTURE_SELECTION') {
