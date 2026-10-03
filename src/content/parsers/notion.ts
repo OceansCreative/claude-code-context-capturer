@@ -831,7 +831,14 @@ function renderBlock(block: NotionBlock, indent: string, n: number): string[] {
             : '- ';
       const out = [`${indent}${marker}${block.text}`];
       if (block.children.length > 0) {
-        out.push(...renderBlocks(block.children, indent + '  '));
+        // Children nest under the LIST marker's width. A numbered marker
+        // ("1. " / "10. ") is 3-4 columns wide, so a fixed 2-space indent
+        // un-nests sub-items (CommonMark then reads them as a new top-level
+        // list restarting at 1). Bulleted/todo markers are "- " (2 cols; the
+        // "[x] " in a todo is content, not part of the list marker).
+        const childIndent =
+          block.type === 'numbered' ? ' '.repeat(`${n}. `.length) : '  ';
+        out.push(...renderBlocks(block.children, indent + childIndent));
       }
       return out;
     }

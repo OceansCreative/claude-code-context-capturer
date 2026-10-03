@@ -60,6 +60,26 @@ describe('htmlToMarkdown', () => {
     expect(md).not.toMatch(/\n{3,}/);
   });
 
+  it('preserves blank lines inside fenced code blocks', () => {
+    // PEP8 puts two blank lines between top-level defs; collapseWhitespace
+    // must NOT squash blank lines inside ``` fences (code fidelity).
+    const code = 'def a():\n    pass\n\n\ndef b():\n    pass';
+    const html = `<pre><code class="language-python">${code}</code></pre>`;
+    const md = htmlToMarkdown(html);
+    expect(md).toContain('def a():\n    pass\n\n\ndef b():');
+  });
+
+  it('still collapses blank lines in prose outside code fences', () => {
+    const html =
+      '<p>Intro</p><pre><code>x\n\n\ny</code></pre><p>A</p><p></p><p></p><p>B</p>';
+    const md = htmlToMarkdown(html);
+    // Code keeps its blank lines...
+    expect(md).toContain('x\n\n\ny');
+    // ...but the prose after the fence is still collapsed.
+    const afterFence = md.slice(md.lastIndexOf('```') + 3);
+    expect(afterFence).not.toMatch(/\n{3,}/);
+  });
+
   it('removes aria-hidden spans', () => {
     const html = '<p>Visible<span aria-hidden="true">hidden</span></p>';
     const md = htmlToMarkdown(html);

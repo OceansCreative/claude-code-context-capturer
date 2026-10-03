@@ -81,7 +81,16 @@ function detectLanguage(codeEl: Element): string {
   return '';
 }
 
-/** Collapse runs of 3+ blank lines into 2. */
+/**
+ * Collapse runs of 3+ blank lines into 2 — but NEVER inside fenced code
+ * blocks, where blank lines are meaningful content (e.g. PEP8's two blank
+ * lines between top-level defs). Splitting on ``` fences keeps captured code
+ * byte-for-byte while still tidying the surrounding prose.
+ */
 function collapseWhitespace(md: string): string {
-  return md.replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  const segments = md.split(/(```[\s\S]*?```)/g);
+  const collapsed = segments
+    .map((seg, i) => (i % 2 === 1 ? seg : seg.replace(/\n{3,}/g, '\n\n')))
+    .join('');
+  return collapsed.trim() + '\n';
 }

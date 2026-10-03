@@ -261,7 +261,12 @@ function resolveTitle(turns: Turn[]): string {
 }
 
 function stripGeminiSuffix(title: string): string {
-  return title.replace(/\s*[-|–]\s*(?:Google\s+)?Gemini\s*$/i, '').trim();
+  const stripped = title.replace(/\s*[-|–]\s*(?:Google\s+)?Gemini\s*$/i, '').trim();
+  // A bare "Gemini" / "Google Gemini" tab title (a new or still-loading
+  // conversation that Gemini hasn't auto-named yet) carries no real title —
+  // treat it as empty so resolveTitle falls through to the first user prompt.
+  if (/^(?:Google\s+)?Gemini$/i.test(stripped)) return '';
+  return stripped;
 }
 
 function renderConversationMarkdown(title: string, turns: Turn[]): string {
