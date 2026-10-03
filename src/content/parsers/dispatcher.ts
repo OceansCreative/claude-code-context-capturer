@@ -10,6 +10,7 @@ import { canHandleYoutube, parseYoutube } from './youtube';
 import { canHandleReddit, parseReddit } from './reddit';
 import { canHandleHackerNews, parseHackerNews } from './hackernews';
 import { canHandleX, parseX } from './x';
+import { canHandleNotion, parseNotion } from './notion';
 import { parseGenericPage } from './generic';
 import type { CaptureOptions, CapturedContext } from '@/shared/types';
 
@@ -39,6 +40,9 @@ export async function dispatchPageParser(
   // X/Twitter only claims /<user>/status/<id> paths — profile and timeline
   // pages fall through to generic.
   if (canHandleX()) return parseX();
+  // Notion only claims URLs that carry a page id — the dashboard, login, and
+  // workspace-root pages fall through to generic.
+  if (canHandleNotion()) return parseNotion(options);
   if (canHandleGitHub()) return parseGitHub();
   if (canHandleStackOverflow()) return parseStackOverflow();
   if (canHandleZenn()) return parseZenn();

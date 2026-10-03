@@ -72,6 +72,7 @@ export type ParserName =
   | 'reddit'
   | 'hackernews'
   | 'x'
+  | 'notion'
   | 'generic'
   | 'selection';
 
