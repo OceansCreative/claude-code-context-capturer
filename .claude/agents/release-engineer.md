@@ -28,6 +28,45 @@ npm run build
 
 **All four must pass.** If any fail, **stop and report**. Don't release a broken build. Don't try to fix unrelated failures — that's a separate agent's job.
 
+### 2b. Permission audit (excessive-permissions guard)
+
+The Chrome Web Store auto-rejects a package that declares a permission it
+doesn't use ("Purple Potassium" / excessive permissions). v1.4.0 was rejected
+this way: `scripting` was declared but every use had been replaced by the
+offscreen document, leaving the permission orphaned in the manifest. **Catch
+this before building, never after a rejection.**
+
+For EACH permission in `src/manifest.config.ts` `permissions:`, confirm a real
+runtime code path uses it — not just a comment or the manifest line itself:
+
+```bash
+# List declared permissions, then grep each against real usage in src/
+# (exclude the manifest file and comment-only matches).
+grep -rnE "chrome\.(scripting|storage|contextMenus|offscreen|tabs|alarms|cookies|downloads|notifications|webNavigation|declarativeNetRequest)\b" src/ \
+  | grep -v "src/manifest.config.ts" | grep -vE "^\s*(src/[^:]+:[0-9]+:\s*)?\*"
+```
+
+Mapping to verify (a permission with ZERO real references is the failure mode):
+- `storage` → `chrome.storage.*` · `contextMenus` → `chrome.contextMenus.*`
+  · `offscreen` → `chrome.offscreen.*` · `scripting` → `chrome.scripting.*`
+  · `tabs` → `chrome.tabs.*` (sensitive fields)
+- `clipboardWrite` → the offscreen `document.execCommand('copy')` path
+- `activeTab` → paired with `<all_urls>` host access; acceptable to keep when
+  the content script / `chrome.tabs` capture flow relies on it. Not grep-able
+  to a single API; judge by whether capture still needs it.
+
+**If any declared permission has no real usage (appears only in the manifest
+and in comments), STOP and report it to the orchestrator** — do NOT bump or
+build. The fix (removing the permission) is a code change the orchestrator
+owns; your job is to catch it. Also diff the permission set against the
+previous released tag so step 9/11 can report added/removed accurately:
+
+```bash
+PREV=$(git tag -l 'v*' | sort -V | tail -1)
+git show "$PREV:src/manifest.config.ts" | sed -n '/permissions:/,/]/p'   # prior set
+sed -n '/permissions:/,/]/p' src/manifest.config.ts                       # current set
+```
+
 ### 3. Bump version in both files
 
 - `package.json` `"version"`
@@ -147,6 +186,7 @@ Full procedure with troubleshooting: `docs/WEB_STORE_UPDATE.md`
 
 - **Never push without CI green** on a prior push (the bump commit). Tag goes after CI passes.
 - **Never skip pre-flight** (tsc / lint / test / build). All four, every time.
+- **Never skip the permission audit (step 2b).** Every declared permission must have a real code path. A declared-but-unused permission is an automatic Web Store rejection — stop and report it rather than shipping it.
 - **Never attempt the Chrome Web Store submission yourself.** Stop at "zip on Desktop."
 - **Never `--force` push** tags or branches.
 - **Never amend commits.** If something needs fixing, make a new commit.
