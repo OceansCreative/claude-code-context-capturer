@@ -10,7 +10,7 @@
 
 # Claude Code Context Capturer
 
-> Capture web pages as Markdown and append them **directly to your project's context files** — `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, all at once. Multi-project routing by URL pattern. Site-specific parsers for GitHub, Stack Overflow, Hacker News, X/Twitter, Zenn, Qiita, MDN, YouTube, Reddit, ChatGPT, Gemini, Notion, arXiv, and claude.ai conversations.
+> Capture web pages as Markdown and append them **directly to your project's context files** — `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, all at once. Multi-project routing by URL pattern. Site-specific parsers for GitHub, GitHub Gist, Stack Overflow, Hacker News, X/Twitter, Zenn, Qiita, MDN, YouTube, Reddit, ChatGPT, Gemini, Notion, arXiv, and claude.ai conversations.
 
 ![hero](docs/screenshots/03-hero.png)
 
@@ -57,6 +57,7 @@ I see the same.
 - **選択範囲モード**：テキスト選択時はその部分だけを抽出
 - **サイト別最適化**：以下のサイトで専用パーサーが動作
   - GitHub（Issue / Pull Request / Discussion / README）
+  - **GitHub Gist** *(v1.5.0+)* — gist.github.com の gist（複数ファイルを含むことがある）を 1 つの Markdown として抽出。各ファイルを `## <ファイル名>` 見出し＋言語付きコードフェンスで出力し、言語は拡張子から推定（取れない場合は描画ハイライトのクラスで補完）。コードファイルは描画済みのハイライトテーブルから復元（ネットワーク不要）、Markdown / rST ファイルはレンダリング済み HTML ではなく Raw ソースを取得して忠実に再現（Raw が取れないときはレンダリング結果にフォールバック）。gist の説明（なければ先頭ファイル名）をタイトルに、著者と作成日時も取得。ファイル内容が取れないときは空キャプチャにせずフレンドリーなエラー、同一 gist の再キャプチャは上書き更新
   - Stack Overflow / Stack Exchange
   - Zenn
   - Qiita
@@ -106,7 +107,7 @@ I see the same.
 | クリップボードに出力 | ✓ | ✓ | ✓ | ✓ |
 | **プロジェクトの実ファイル `CLAUDE.md` に直接書き込み** | ✗ | ✗（独自 Vault） | ✗ | **✓** |
 | **URL パターンで複数ファイルに振り分け** | ✗ | ✗ | ✗ | **✓** |
-| GitHub / Stack Overflow / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit / ChatGPT / Gemini / Notion / arXiv サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
+| GitHub / Gist / Stack Overflow / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit / ChatGPT / Gemini / Notion / arXiv サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
 | **claude.ai 会話キャプチャ（thinking / tool_use / branch 保持）** | ✗ | ✗ | ✗ | **✓** |
 | 100% ローカル処理・完全 OSS | ✓ | ✗（SaaS） | ✓ | ✓ |
 
@@ -265,7 +266,7 @@ Honestly, several Web→Markdown extensions already exist: **[LLMFeeder](https:/
 | Clipboard output | ✓ | ✓ | ✓ | ✓ |
 | **Direct write to your project's `CLAUDE.md`** | ✗ | ✗ (own vault) | ✗ | **✓** |
 | **URL-pattern routing to multiple files** | ✗ | ✗ | ✗ | **✓** |
-| Site-specific parsers (GitHub / SO / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit / ChatGPT / Gemini / Notion / arXiv) | ✗ | partial | ✗ | **✓** |
+| Site-specific parsers (GitHub / Gist / SO / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit / ChatGPT / Gemini / Notion / arXiv) | ✗ | partial | ✗ | **✓** |
 | **claude.ai conversation capture (thinking / tool_use / branches preserved)** | ✗ | ✗ | ✗ | **✓** |
 | 100% local, fully OSS | ✓ | ✗ (SaaS) | ✓ | ✓ |
 
@@ -276,6 +277,7 @@ In short: a clipper purpose-built for AI agent context files. If you want a gene
 - **One-click capture** — Toolbar icon or keyboard shortcut
 - **Selection mode** — Capture only what you've selected
 - **Site-specific parsers** for GitHub, Stack Overflow, Zenn, Qiita, MDN, and **YouTube** *(v0.8.0+)* — pulls the transcript + chapters + metadata, not just the title
+- **GitHub Gist capture** *(v1.5.0+)* — captures a gist.github.com gist (a page that can hold many files) as a single Markdown document. Each file becomes a `## <filename>` section with a fenced code block, language inferred from the extension (falling back to the rendered highlight class). Code files are rebuilt from the rendered highlight table with no network call; Markdown / rST files — which GitHub renders to HTML with no source view — fetch their Raw source for byte-fidelity instead of the rendered HTML, falling back to the rendered view if the Raw link is unavailable. The gist description (or the first filename) becomes the title, the author and created time are captured, missing file content surfaces a friendly error instead of an empty capture, and re-capturing the same gist updates it in place
 - **Reddit thread capture** *(v1.1.0+)* — captures the post + comment tree via Reddit's JSON API (no scraping of the unstable shreddit DOM). Selftext and comment bodies pass through as native Markdown, replies nest as blockquotes, deleted/removed comments are skipped, and megathreads are capped at 100 comments with an explicit truncation note
 - **Hacker News thread capture** *(v1.1.0+)* — captures the story (title / external link / points / author / Ask HN text) plus the comment tree with nesting rendered as blockquotes, skipping `[dead]` / `[flagged]` and capping at the first 100 comments
 - **X / Twitter thread capture** *(v1.2.0+)* — captures a status page's visible thread from the DOM (no internal API calls — safe for your account; anchored on `data-testid` semantics, never obfuscated class names). Gets the focal tweet, same-author thread continuations as a numbered sequence, and visible replies flat (capped at 50). Mentions / hashtags / links become Markdown links, emoji are restored from `img alt`, quote tweets render as blockquotes, media becomes `[image: alt]` / `[video]` placeholders, and promoted content is skipped. Tweets X hasn't rendered (virtualized away) aren't captured — a note is added when the thread continues

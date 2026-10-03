@@ -1,4 +1,5 @@
 import { canHandleGitHub, parseGitHub } from './github';
+import { canHandleGist, parseGist } from './gist';
 import { canHandleStackOverflow, parseStackOverflow } from './stackoverflow';
 import { canHandleZenn, parseZenn } from './zenn';
 import { canHandleQiita, parseQiita } from './qiita';
@@ -47,6 +48,10 @@ export async function dispatchPageParser(
   // arXiv only claims /abs/<id> and /pdf/<id> paper pages — listing, search,
   // and the homepage fall through to generic.
   if (canHandleArxiv()) return parseArxiv(options);
+  // Gist lives on its own host (gist.github.com), separate from github.com —
+  // a single-gist page with a `/<user>/<id>` path; the discover/home pages fall
+  // through to generic.
+  if (canHandleGist()) return parseGist();
   if (canHandleGitHub()) return parseGitHub();
   if (canHandleStackOverflow()) return parseStackOverflow();
   if (canHandleZenn()) return parseZenn();
