@@ -11,7 +11,6 @@ export default defineManifest({
     'activeTab',
     'clipboardWrite',
     'storage',
-    'scripting',
     'contextMenus',
     'offscreen',
   ],
