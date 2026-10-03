@@ -247,7 +247,15 @@ async function fetchRawSource(fileEl: Element): Promise<string | undefined> {
   if (!href) return undefined;
   if (typeof fetch !== 'function') return undefined;
   try {
-    const res = await fetch(absolutize(href), { credentials: 'include' });
+    // credentials:'omit' is REQUIRED here: the /raw/ link 301-redirects to
+    // gist.githubusercontent.com, a CROSS-origin host that serves raw bytes
+    // with `Access-Control-Allow-Origin: *`. Per the CORS spec a *credentialed*
+    // cross-origin response with a wildcard ACAO is blocked, so
+    // credentials:'include' would make this fetch always reject and silently
+    // fall back to the lossy rendered-HTML path. Omitting credentials lets the
+    // wildcard ACAO be accepted — public gists (the common case) fetch their
+    // true source. (Private gists would need the service worker; out of scope.)
+    const res = await fetch(absolutize(href), { credentials: 'omit' });
     if (!res.ok) return undefined;
     return await res.text();
   } catch {

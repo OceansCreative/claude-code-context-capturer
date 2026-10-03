@@ -333,9 +333,13 @@ describe('parseGist - rendered markdown file', () => {
     // The rendered HTML text must NOT be used when raw source is available.
     expect(ctx.body).not.toContain('rendered body');
 
-    // Raw link was fetched same-origin, resolved to an absolute URL.
-    const [calledUrl] = fetchMock.mock.calls[0];
+    // Raw link resolved to an absolute URL.
+    const [calledUrl, calledOpts] = fetchMock.mock.calls[0];
     expect(calledUrl).toBe(`https://gist.github.com/carol/${GIST_ID}/raw/abc123/README.md`);
+    // MUST be credentials:'omit' — the /raw/ link redirects to the cross-origin
+    // gist.githubusercontent.com (ACAO '*'), where a credentialed request is
+    // blocked by CORS and the raw fetch would always fail. See fetchRawSource.
+    expect(calledOpts?.credentials).toBe('omit');
   });
 
   it('falls back to the rendered HTML when the raw fetch fails', async () => {
