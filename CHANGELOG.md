@@ -6,6 +6,13 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.4.1 — Permission-fix release (Chrome Web Store compliance)
+
+- **Fix:** Removed the unused `scripting` permission from the manifest. It was declared but never exercised — clipboard writes go through the offscreen document (`chrome.offscreen`), not `chrome.scripting` — so the Chrome Web Store flagged v1.4.0 for an excessive permission. This release drops it. See `f48ff79`.
+- Permissions are now `activeTab`, `clipboardWrite`, `storage`, `contextMenus`, `offscreen` — a strict subset of v1.4.0, with nothing added. No new permissions, ever.
+- No parser or feature changes. 283/283 unit tests pass (unchanged from v1.4.0).
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.4.1) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v1.4.0...v1.4.1)
+
 ## v1.4.0 — Gemini + Notion parsers + recent-captures list
 
 - **New:** Gemini conversation parser. Captures a gemini.google.com `/app/<id>` or `/share/<id>` conversation from the rendered DOM, anchored on Gemini's semantic custom elements (`conversation-container` / `user-query` / `model-response`) — no obfuscated class names and no internal-API calls, so there's no account-flag risk. Falls back to the bare page title when a conversation heading isn't present.
