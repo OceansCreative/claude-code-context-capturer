@@ -67,6 +67,7 @@ export type ParserName =
   | 'claude-ai'
   | 'claude-ai-artifact'
   | 'chatgpt'
+  | 'gemini'
   | 'youtube'
   | 'reddit'
   | 'hackernews'

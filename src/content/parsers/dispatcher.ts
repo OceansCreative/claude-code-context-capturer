@@ -5,6 +5,7 @@ import { canHandleQiita, parseQiita } from './qiita';
 import { canHandleMdn, parseMdn } from './mdn';
 import { canHandleClaudeAi, parseClaudeAi } from './claude-ai';
 import { canHandleChatGpt, parseChatGpt } from './chatgpt';
+import { canHandleGemini, parseGemini } from './gemini';
 import { canHandleYoutube, parseYoutube } from './youtube';
 import { canHandleReddit, parseReddit } from './reddit';
 import { canHandleHackerNews, parseHackerNews } from './hackernews';
@@ -27,6 +28,9 @@ export async function dispatchPageParser(
   // ChatGPT only claims chatgpt.com / chat.openai.com `/c/<id>` conversation
   // pages, so it's as specific as the claude-ai check above.
   if (canHandleChatGpt()) return parseChatGpt(options);
+  // Gemini only claims gemini.google.com `/app/<id>` and `/share/<id>`
+  // conversation pages, so it's as specific as the claude-ai/ChatGPT checks.
+  if (canHandleGemini()) return parseGemini(options);
   if (canHandleYoutube()) return parseYoutube(options);
   // Reddit only claims /r/<sub>/comments/<id> paths, so it's as specific as
   // the claude-ai/youtube checks above — listing pages fall through to generic.

@@ -7,7 +7,7 @@ This file contains the text and asset specs you'll need when submitting the exte
 ## Store listing — short description (132 chars max)
 
 ```
-Capture web pages, ChatGPT & claude.ai chats, YouTube to Markdown. Fan out to CLAUDE.md / .cursorrules / .windsurfrules.
+Capture web pages, ChatGPT, Gemini & claude.ai chats, YouTube to Markdown. Fan out to CLAUDE.md / .cursorrules / .windsurfrules.
 ```
 
 ## Store listing — detailed description (English)
@@ -35,6 +35,7 @@ What it does:
 • Hacker News thread capture (v1.1.0+) — captures the story (title, link, points, author, Ask HN text) and the comment tree with nesting preserved as quotes; [dead]/[flagged] skipped, capped at the first 100 comments
 • X / Twitter thread capture (v1.2.0+) — captures the visible thread on a status page straight from the DOM (no internal API calls): focal tweet, same-author continuations as a numbered sequence, and replies flat (capped at 50). Mentions/hashtags/links become Markdown links, emoji preserved, quote tweets as blockquotes, media as [image]/[video] placeholders, promoted content skipped
 • ChatGPT conversation capture (v1.3.0+) — captures a chatgpt.com (or chat.openai.com) conversation via the internal API instead of scraping the unstable DOM: user/assistant turns preserved, code as fenced blocks, images as [image] placeholders, tool calls compact, system/hidden messages skipped, model tagged, re-capture updates in place
+• Gemini conversation capture (v1.4.0+) — captures a gemini.google.com /app (or /share) conversation. Gemini has no clean JSON API, so this reads the rendered DOM anchored on stable semantic elements (conversation-container, user-query, model-response), not obfuscated class names: user/model turns preserved, code as fenced blocks with language, lists/tables/inline code preserved, screen-reader duplicate text stripped, re-capture updates in place
 • Site-specific parsers for GitHub, Stack Overflow, Hacker News, X/Twitter, Zenn, Qiita, MDN
 • Generic parser (Mozilla Readability) for everything else
 • Selection mode: capture just what you've highlighted
@@ -81,6 +82,7 @@ Claude Code Context Capturer は、開いている Web ページを Markdown に
 • Hacker News スレッドキャプチャ (v1.1.0+) — item ページのストーリー(タイトル / リンク / points / 投稿者 / Ask HN 本文)とコメントツリーをネスト構造(引用)を保って抽出。[dead] / [flagged] はスキップ、最初の 100 コメントでキャップ
 • X / Twitter スレッドキャプチャ (v1.2.0+) — status ページに表示中のスレッドを DOM から直接抽出(内部 API は不使用)。focal tweet + 同一著者の続きツイート(番号付き)+ リプライ(フラット・最大 50 件)。mention / hashtag / リンクは Markdown リンク化、絵文字保持、引用ツイートは blockquote、画像 / 動画は [image] / [video] プレースホルダ、プロモ枠はスキップ
 • ChatGPT 会話キャプチャ (v1.3.0+) — chatgpt.com(旧 chat.openai.com)の会話を内部 API 経由で抽出(不安定な DOM は不使用)。user / assistant のターンを保持、code はコードフェンス、画像は [image] プレースホルダ、tool 呼び出しはコンパクト、system / 非表示メッセージはスキップ、model をタグ化、再キャプチャは上書き更新
+• Gemini 会話キャプチャ (v1.4.0+) — gemini.google.com の /app(および /share)会話を抽出。Gemini にはクリーンな JSON API がないため、難読化クラス名ではなく安定したセマンティック要素(conversation-container / user-query / model-response)に依存して描画済み DOM を解析。user / model のターンを保持、code は言語付きコードフェンス、リスト / テーブル / インライン code を再現、スクリーンリーダ用の重複テキストはスキップ、再キャプチャは上書き更新
 • GitHub・Stack Overflow・Hacker News・X / Twitter・Zenn・Qiita・MDN のサイト別パーサー
 • その他のサイトは Mozilla Readability で本文抽出
 • 選択範囲モード(テキスト選択時はその部分のみ)
