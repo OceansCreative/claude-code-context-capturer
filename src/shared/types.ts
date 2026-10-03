@@ -73,6 +73,7 @@ export type ParserName =
   | 'hackernews'
   | 'x'
   | 'notion'
+  | 'arxiv'
   | 'generic'
   | 'selection';
 

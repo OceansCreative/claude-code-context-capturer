@@ -11,6 +11,7 @@ import { canHandleReddit, parseReddit } from './reddit';
 import { canHandleHackerNews, parseHackerNews } from './hackernews';
 import { canHandleX, parseX } from './x';
 import { canHandleNotion, parseNotion } from './notion';
+import { canHandleArxiv, parseArxiv } from './arxiv';
 import { parseGenericPage } from './generic';
 import type { CaptureOptions, CapturedContext } from '@/shared/types';
 
@@ -43,6 +44,9 @@ export async function dispatchPageParser(
   // Notion only claims URLs that carry a page id — the dashboard, login, and
   // workspace-root pages fall through to generic.
   if (canHandleNotion()) return parseNotion(options);
+  // arXiv only claims /abs/<id> and /pdf/<id> paper pages — listing, search,
+  // and the homepage fall through to generic.
+  if (canHandleArxiv()) return parseArxiv(options);
   if (canHandleGitHub()) return parseGitHub();
   if (canHandleStackOverflow()) return parseStackOverflow();
   if (canHandleZenn()) return parseZenn();
