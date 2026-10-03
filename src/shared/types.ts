@@ -60,6 +60,7 @@ export interface CapturedArtifact {
 /** Names of all built-in parsers. */
 export type ParserName =
   | 'github'
+  | 'gist'
   | 'stackoverflow'
   | 'zenn'
   | 'qiita'

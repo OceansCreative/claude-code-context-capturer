@@ -1,4 +1,5 @@
 import { canHandleGitHub, parseGitHub } from './github';
+import { canHandleGist, parseGist } from './gist';
 import { canHandleStackOverflow, parseStackOverflow } from './stackoverflow';
 import { canHandleZenn, parseZenn } from './zenn';
 import { canHandleQiita, parseQiita } from './qiita';
@@ -43,6 +44,10 @@ export async function dispatchPageParser(
   // Notion only claims URLs that carry a page id — the dashboard, login, and
   // workspace-root pages fall through to generic.
   if (canHandleNotion()) return parseNotion(options);
+  // Gist lives on its own host (gist.github.com), separate from github.com —
+  // a single-gist page with a `/<user>/<id>` path; the discover/home pages fall
+  // through to generic.
+  if (canHandleGist()) return parseGist();
   if (canHandleGitHub()) return parseGitHub();
   if (canHandleStackOverflow()) return parseStackOverflow();
   if (canHandleZenn()) return parseZenn();
