@@ -6,6 +6,15 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.5.0 — arXiv + GitHub Gist parsers
+
+- **New:** arXiv paper parser. Captures an arxiv.org `/abs/<id>` abstract page (and `/pdf/<id>` via its abstract page) from the static server-rendered HTML, anchored on arXiv's stable `citation_*` meta tags with a DOM fallback: clean title, authors line, abstract, and a compact metadata block (categories, versioned arXiv id, submission dates, comments, journal reference and DOI when present, PDF + abstract links). Categories become tags, and the `dedupeKey` is version-stripped so re-capturing a new version updates in place.
+- **New:** GitHub Gist parser. Captures a gist.github.com gist — a page that can hold many files — as a single Markdown document: each file becomes a heading plus a fenced code block, language inferred from the extension. Code files are rebuilt from the rendered highlight table (no network); Markdown/rST files fetch their Raw source for fidelity instead of the rendered HTML, falling back to the rendered view if the Raw link is gone. Re-capture updates in place.
+- **Fix (pre-release review):** Gist Raw-source fetch now uses `credentials: 'omit'`. The credentialed cross-origin fetch to gist.githubusercontent.com's wildcard-ACAO host was CORS-blocked, which had made the Markdown/rST fidelity path dead. See `09ab83c`.
+- Site-specific parsers now cover **GitHub / Stack Overflow / Zenn / Qiita / MDN / YouTube / Reddit / Hacker News / X (Twitter) / claude.ai / ChatGPT / Gemini / Notion / arXiv / GitHub Gist** — 15 sources.
+- Permissions unchanged from v1.4.1 — both parsers stay within the existing `<all_urls>` host permission (static HTML reads and same-origin/cross-origin fetches need no new permission), and the manifest remains the strict 5: `activeTab`, `clipboardWrite`, `storage`, `contextMenus`, `offscreen`, with no `scripting`. 320/320 unit tests pass (+37 vs v1.4.1).
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.5.0) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v1.4.1...v1.5.0)
+
 ## v1.4.1 — Permission-fix release (Chrome Web Store compliance)
 
 - **Fix:** Removed the unused `scripting` permission from the manifest. It was declared but never exercised — clipboard writes go through the offscreen document (`chrome.offscreen`), not `chrome.scripting` — so the Chrome Web Store flagged v1.4.0 for an excessive permission. This release drops it. See `f48ff79`.
