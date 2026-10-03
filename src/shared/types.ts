@@ -165,7 +165,14 @@ export type RuntimeMessage =
       skipFutureWrites?: boolean;
     }
   /** Preview → SW: discard the staged capture and do nothing. */
-  | { type: 'PREVIEW_CANCEL'; stageId: string };
+  | { type: 'PREVIEW_CANCEL'; stageId: string }
+  /**
+   * Popup → SW: re-copy a buffered capture's Markdown to the system clipboard.
+   * Routed through the SW so it reuses the offscreen clipboard path (the popup
+   * can't own the offscreen document, and navigator.clipboard is unreliable
+   * once the popup loses focus). Responds `{ ok: true } | { ok: false; error }`.
+   */
+  | { type: 'RECOPY_BUFFER_ENTRY'; id: string };
 
 /**
  * A captured context staged for user review in the preview window. Holds

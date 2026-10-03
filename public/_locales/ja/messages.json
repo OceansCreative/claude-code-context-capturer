@@ -46,6 +46,15 @@
   "popupOpenSettingsToRelink": { "message": "設定を開いて CLAUDE.md をリンク／再許可 →" },
   "recentCaptures": { "message": "最近のキャプチャ" },
   "manageAllCaptures": { "message": "すべてのキャプチャを管理 →" },
+  "recentUntitled": { "message": "無題のキャプチャ" },
+  "recentCopy": { "message": "コピー" },
+  "recentCopied": { "message": "コピーしました ✓" },
+  "recentCopyFailed": { "message": "コピーに失敗しました" },
+  "recentCopyTitle": { "message": "このキャプチャをクリップボードに再コピー" },
+  "recentEmpty": { "message": "最近のキャプチャはここに表示されます。" },
+  "recentEmptyBufferHint": {
+    "message": "ここに集めるには、バッファ出力モード（設定 → デフォルトの動作）をオンにしてください。"
+  },
   "popupShortcuts": {
     "message": "ショートカット: Ctrl/Cmd+Shift+L（ページ） · Ctrl/Cmd+Shift+K（選択範囲）"
   },

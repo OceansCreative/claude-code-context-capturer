@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react';
 import type { RuntimeMessage, UserOptions } from '@/shared/types';
 import { readBuffer, type BufferEntry } from '@/shared/buffer-storage';
 import { loadOptions, saveOptions } from '@/shared/options-storage';
+import {
+  selectRecentCaptures,
+  formatCaptureRow,
+  outputModeIncludesBuffer,
+} from '@/shared/recent-captures';
 import { t } from '@/shared/i18n';
+
+/** How many recent captures the popup surfaces. */
+const RECENT_LIMIT = 5;
 
 type Status = 'idle' | 'capturing' | 'success' | 'preview-pending' | 'error';
 
@@ -12,6 +20,11 @@ export default function App() {
   const [buffer, setBuffer] = useState<BufferEntry[]>([]);
   const [options, setOptions] = useState<UserOptions | null>(null);
   const [isClaudeAi, setIsClaudeAi] = useState(false);
+  // Transient per-row feedback for the re-copy button.
+  const [copyFeedback, setCopyFeedback] = useState<{
+    id: string;
+    status: 'copied' | 'error';
+  } | null>(null);
 
   useEffect(() => {
     void refreshBuffer();
@@ -74,6 +87,35 @@ export default function App() {
   function openOptions() {
     chrome.runtime.openOptionsPage();
   }
+
+  /**
+   * Re-copy a buffered capture to the clipboard. Routed through the service
+   * worker so it reuses the same offscreen clipboard path as a fresh capture
+   * (navigator.clipboard is unreliable from the popup once it loses focus).
+   */
+  async function handleRecopy(id: string) {
+    let ok = false;
+    try {
+      const res = (await chrome.runtime.sendMessage({
+        type: 'RECOPY_BUFFER_ENTRY',
+        id,
+      })) as { ok: boolean; error?: string };
+      ok = res?.ok === true;
+    } catch {
+      ok = false;
+    }
+    setCopyFeedback({ id, status: ok ? 'copied' : 'error' });
+    setTimeout(
+      () => setCopyFeedback((cur) => (cur?.id === id ? null : cur)),
+      1500
+    );
+  }
+
+  const now = Date.now();
+  const uiLocale = chrome.i18n.getUILanguage();
+  const recent = selectRecentCaptures(buffer, RECENT_LIMIT).map((entry) =>
+    formatCaptureRow(entry, now, uiLocale)
+  );
 
   return (
     <div className="w-[340px] p-4 font-sans">
@@ -181,38 +223,86 @@ export default function App() {
         </div>
       )}
 
-      {buffer.length > 0 && (
-        <section className="mt-4 border-t border-slate-200 pt-3">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {t('recentCaptures')} ({buffer.length})
-          </h2>
-          <ul className="space-y-1.5">
-            {buffer.slice(0, 5).map((entry) => (
-              <li key={entry.id} className="text-xs">
-                <a
-                  href={entry.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block truncate text-slate-700 hover:text-slate-900"
-                  title={entry.title}
-                >
-                  {entry.title}
-                </a>
-                <span className="text-slate-400">
-                  {new Date(entry.capturedAt).toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={openOptions}
-            className="mt-2 text-xs text-slate-500 underline hover:text-slate-700"
-          >
-            {t('manageAllCaptures')}
-          </button>
-        </section>
-      )}
+      <section className="mt-4 border-t border-slate-200 pt-3">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {t('recentCaptures')}
+          {recent.length > 0 ? ` (${buffer.length})` : ''}
+        </h2>
+
+        {recent.length === 0 ? (
+          <div className="text-xs text-slate-400">
+            <p>{t('recentEmpty')}</p>
+            {options && !outputModeIncludesBuffer(options.defaultMode) && (
+              <p className="mt-1 text-[10px] leading-snug">
+                {t('recentEmptyBufferHint')}
+              </p>
+            )}
+          </div>
+        ) : (
+          <>
+            <ul className="space-y-1.5">
+              {recent.map((row) => {
+                const title = row.title || t('recentUntitled');
+                const meta = [row.source, row.relativeTime]
+                  .filter(Boolean)
+                  .join(' · ');
+                const feedback =
+                  copyFeedback?.id === row.id ? copyFeedback.status : null;
+                return (
+                  <li
+                    key={row.id}
+                    className="flex items-start justify-between gap-2 text-xs"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <a
+                        href={row.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block truncate text-slate-700 hover:text-slate-900"
+                        title={title}
+                      >
+                        {title}
+                      </a>
+                      {meta && (
+                        <span className="block text-[10px] text-slate-400">
+                          {meta}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleRecopy(row.id)}
+                      aria-label={t('recentCopyTitle')}
+                      title={t('recentCopyTitle')}
+                      className={
+                        'shrink-0 rounded border px-1.5 py-0.5 text-[10px] transition-colors ' +
+                        (feedback === 'error'
+                          ? 'border-rose-200 text-rose-600'
+                          : feedback === 'copied'
+                            ? 'border-emerald-200 text-emerald-700'
+                            : 'border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700')
+                      }
+                    >
+                      {feedback === 'copied'
+                        ? t('recentCopied')
+                        : feedback === 'error'
+                          ? t('recentCopyFailed')
+                          : t('recentCopy')}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <button
+              type="button"
+              onClick={openOptions}
+              className="mt-2 text-xs text-slate-500 underline hover:text-slate-700"
+            >
+              {t('manageAllCaptures')}
+            </button>
+          </>
+        )}
+      </section>
 
       <footer className="mt-4 border-t border-slate-200 pt-3 text-[10px] text-slate-400">
         {t('popupShortcuts')}

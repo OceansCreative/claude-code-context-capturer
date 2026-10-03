@@ -46,6 +46,15 @@
   "popupOpenSettingsToRelink": { "message": "Open settings to link / re-grant CLAUDE.md →" },
   "recentCaptures": { "message": "Recent captures" },
   "manageAllCaptures": { "message": "Manage all captures →" },
+  "recentUntitled": { "message": "Untitled capture" },
+  "recentCopy": { "message": "Copy" },
+  "recentCopied": { "message": "Copied ✓" },
+  "recentCopyFailed": { "message": "Copy failed" },
+  "recentCopyTitle": { "message": "Re-copy this capture to the clipboard" },
+  "recentEmpty": { "message": "Recent captures will appear here." },
+  "recentEmptyBufferHint": {
+    "message": "Turn on a buffer output mode (Settings → Default action) to collect them here."
+  },
   "popupShortcuts": {
     "message": "Shortcuts: Ctrl/Cmd+Shift+L (page) · Ctrl/Cmd+Shift+K (selection)"
   },
