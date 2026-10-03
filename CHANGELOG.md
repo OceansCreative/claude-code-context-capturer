@@ -6,6 +6,16 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.4.0 — Gemini + Notion parsers + recent-captures list
+
+- **New:** Gemini conversation parser. Captures a gemini.google.com `/app/<id>` or `/share/<id>` conversation from the rendered DOM, anchored on Gemini's semantic custom elements (`conversation-container` / `user-query` / `model-response`) — no obfuscated class names and no internal-API calls, so there's no account-flag risk. Falls back to the bare page title when a conversation heading isn't present.
+- **New:** Notion page parser. Captures a notion.so / notion.site page via Notion's internal block API (`/api/v3/loadPageChunk`, cursor-paginated) with a DOM fallback, converting the full block tree — headings, nested lists (numbered indentation preserved), code, quotes, callouts, toggles, tables, dividers, and inline marks — to Markdown.
+- **New:** Recent-captures list in the popup. The popup now shows your recent captures with one-click re-copy, backed by the existing buffer storage — no new storage surface.
+- Site-specific parsers now cover **GitHub / Stack Overflow / Zenn / Qiita / MDN / YouTube / Reddit / Hacker News / X (Twitter) / claude.ai / ChatGPT / Gemini / Notion** — 13 sources.
+- Pre-release review fixes: fence-aware blank-line collapsing (preserves code-block fidelity), Gemini bare-title fallback, and Notion nested-numbered-list indentation. See `7e652af`.
+- Permissions unchanged from v1.3.0 — Gemini and Notion are covered by the existing `<all_urls>` host permission (`chrome.i18n`, DOM reads, and same-origin fetches need none). 283/283 unit tests pass (+58 vs v1.3.0).
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.4.0) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v1.3.0...v1.4.0)
+
 ## v1.3.0 — ChatGPT support + Japanese UI + guided onboarding
 
 - **New:** ChatGPT conversation parser. Captures a chatgpt.com / chat.openai.com conversation through ChatGPT's internal API (session token → `backend-api/conversation`), walking the mapping tree from `current_node` — mirroring the claude.ai parser's approach. Site-specific parsers now cover **GitHub / Stack Overflow / Zenn / Qiita / MDN / YouTube / Reddit / Hacker News / X (Twitter) / claude.ai / ChatGPT** — 11 sources.
