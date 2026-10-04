@@ -77,6 +77,8 @@ export type ParserName =
   | 'arxiv'
   | 'devto'
   | 'hashnode'
+  | 'hatenablog'
+  | 'hatenabookmark'
   | 'generic'
   | 'selection';
 
