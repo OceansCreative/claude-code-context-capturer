@@ -3,6 +3,8 @@ import { canHandleGist, parseGist } from './gist';
 import { canHandleStackOverflow, parseStackOverflow } from './stackoverflow';
 import { canHandleZenn, parseZenn } from './zenn';
 import { canHandleQiita, parseQiita } from './qiita';
+import { canHandleDevto, parseDevto } from './devto';
+import { canHandleHashnode, parseHashnode } from './hashnode';
 import { canHandleMdn, parseMdn } from './mdn';
 import { canHandleClaudeAi, parseClaudeAi } from './claude-ai';
 import { canHandleChatGpt, parseChatGpt } from './chatgpt';
@@ -56,6 +58,13 @@ export async function dispatchPageParser(
   if (canHandleStackOverflow()) return parseStackOverflow();
   if (canHandleZenn()) return parseZenn();
   if (canHandleQiita()) return parseQiita();
+  // Dev.to only claims /<user>/<slug> article paths — the home feed, tag
+  // listings (/t/<tag>), and user profiles fall through to generic.
+  if (canHandleDevto()) return parseDevto();
+  // Hashnode claims single-segment post paths on hashnode.dev / hashnode.com
+  // (incl. subdomains). Blog homes, tag/series listings, and — by design —
+  // Hashnode blogs on custom domains all fall through to generic.
+  if (canHandleHashnode()) return parseHashnode();
   if (canHandleMdn()) return parseMdn();
   return parseGenericPage();
 }
