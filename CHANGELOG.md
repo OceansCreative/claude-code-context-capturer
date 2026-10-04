@@ -6,6 +6,16 @@ The project follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.6.0 — Dev.to + Hashnode + Hatena parsers + per-capture route override
+
+- **New:** Dev.to + Hashnode article parser. Captures a dev.to or Hashnode blog article, anchored on the page's schema.org `Article` JSON-LD with a DOM fallback for title, author, and body.
+- **New:** Hatena parser. Captures Hatena Blog articles and Hatena Bookmark entry pages — aimed at the Japanese developer audience.
+- **New:** Per-capture route override in the popup. You can now pick a single capture's destination route directly in the popup instead of relying only on URL matching; the preview confirmation shows the real target route.
+- **Fix (pre-release review):** Hashnode `canHandle` is now scoped to blog subdomains, so the hashnode.com apex is no longer mis-claimed; the preview confirmation label now reflects the actual target route. See `ad4ef75`.
+- Site-specific parsers now cover **GitHub / Stack Overflow / Zenn / Qiita / MDN / YouTube / Reddit / Hacker News / X (Twitter) / claude.ai / ChatGPT / Gemini / Notion / arXiv / GitHub Gist / Dev.to / Hashnode / Hatena** — 18 sources.
+- Permissions unchanged from v1.5.0 — the new parsers and the route override stay within the existing `<all_urls>` host permission, and the manifest remains the strict 5: `activeTab`, `clipboardWrite`, `storage`, `contextMenus`, `offscreen`, with no `scripting`. 368/368 unit tests pass (+48 vs v1.5.0).
+- [Release notes](https://github.com/OceansCreative/claude-code-context-capturer/releases/tag/v1.6.0) · [Diff](https://github.com/OceansCreative/claude-code-context-capturer/compare/v1.5.0...v1.6.0)
+
 ## v1.5.0 — arXiv + GitHub Gist parsers
 
 - **New:** arXiv paper parser. Captures an arxiv.org `/abs/<id>` abstract page (and `/pdf/<id>` via its abstract page) from the static server-rendered HTML, anchored on arXiv's stable `citation_*` meta tags with a DOM fallback: clean title, authors line, abstract, and a compact metadata block (categories, versioned arXiv id, submission dates, comments, journal reference and DOI when present, PDF + abstract links). Categories become tags, and the `dedupeKey` is version-stripped so re-capturing a new version updates in place.
