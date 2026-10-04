@@ -137,6 +137,17 @@ describe('Hashnode parser', () => {
       expect(canHandleHashnode()).toBe(false);
     });
 
+    it('rejects the apex product/marketing site (hashnode.com / hashnode.dev)', () => {
+      // The bare apex is the product site, not a blog host — must fall through
+      // to generic so pages like hashnode.com/pricing aren't mis-captured.
+      setLocation('https://hashnode.com/pricing');
+      expect(canHandleHashnode()).toBe(false);
+      setLocation('https://hashnode.com/');
+      expect(canHandleHashnode()).toBe(false);
+      setLocation('https://hashnode.dev/');
+      expect(canHandleHashnode()).toBe(false);
+    });
+
     it('rejects custom-domain Hashnode blogs (undetectable → generic)', () => {
       // A Hashnode blog on a custom domain is indistinguishable from any site;
       // it must NOT be claimed here.

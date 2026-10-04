@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { loadStagedCapture } from '@/shared/preview-stage';
+import { listRoutes } from '@/shared/handle-store';
+import { resolveTargetRoute } from '@/shared/route-matcher';
 import type { RuntimeMessage, StagedCapture } from '@/shared/types';
 import { t } from '@/shared/i18n';
 
@@ -15,7 +17,7 @@ function getStageIdFromUrl(): string | null {
   return params.get('id');
 }
 
-function describeDestination(staged: StagedCapture): string {
+function describeDestination(staged: StagedCapture, routeLabel: string | null): string {
   const mode = staged.options.defaultMode;
   switch (mode) {
     case 'clipboard':
@@ -23,7 +25,9 @@ function describeDestination(staged: StagedCapture): string {
     case 'append-buffer':
       return t('destBuffer');
     case 'claude-md':
-      return t('destClaudeMd');
+      // Show the actual target route (whether URL-matched or an explicit
+      // per-capture override) so the confirmation screen can't misreport it.
+      return routeLabel ? `${t('destClaudeMd')} → ${routeLabel}` : t('destClaudeMd');
     case 'mcp-store':
       return t('destMcpStore');
     case 'both':
@@ -36,6 +40,7 @@ function describeDestination(staged: StagedCapture): string {
 export default function App() {
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [skipFuture, setSkipFuture] = useState(false);
+  const [routeLabel, setRouteLabel] = useState<string | null>(null);
 
   useEffect(() => {
     const id = getStageIdFromUrl();
@@ -49,6 +54,16 @@ export default function App() {
         return;
       }
       setState({ kind: 'ready', staged, edited: staged.finalMarkdown });
+      // For CLAUDE.md mode, resolve the real target route (honoring any
+      // per-capture override) so the destination label is accurate.
+      if (staged.options.defaultMode === 'claude-md') {
+        void listRoutes()
+          .then((routes) => {
+            const target = resolveTargetRoute(staged.routeId, staged.payload.url, routes);
+            setRouteLabel(target?.label ?? null);
+          })
+          .catch(() => setRouteLabel(null));
+      }
     });
   }, []);
 
@@ -178,7 +193,7 @@ export default function App() {
               {' · '}
               {t('previewDestination')}{' '}
               <span className="font-medium text-slate-700">
-                {describeDestination(staged)}
+                {describeDestination(staged, routeLabel)}
               </span>
             </p>
           </div>

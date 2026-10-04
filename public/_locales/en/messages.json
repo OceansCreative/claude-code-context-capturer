@@ -188,7 +188,7 @@
 
   "destClipboard": { "message": "System clipboard" },
   "destBuffer": { "message": "In-extension buffer" },
-  "destClaudeMd": { "message": "Linked CLAUDE.md (URL-matched route)" },
+  "destClaudeMd": { "message": "Linked CLAUDE.md" },
   "destMcpStore": { "message": "MCP captures directory" },
   "destBoth": { "message": "Clipboard + in-extension buffer" },
   "previewLoading": { "message": "Loading capture…" },

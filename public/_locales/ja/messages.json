@@ -188,7 +188,7 @@
 
   "destClipboard": { "message": "システムのクリップボード" },
   "destBuffer": { "message": "拡張機能内のバッファ" },
-  "destClaudeMd": { "message": "リンクした CLAUDE.md（URL がマッチしたルート）" },
+  "destClaudeMd": { "message": "リンクした CLAUDE.md" },
   "destMcpStore": { "message": "MCP キャプチャディレクトリ" },
   "destBoth": { "message": "クリップボード + 拡張機能内のバッファ" },
   "previewLoading": { "message": "キャプチャを読み込み中…" },

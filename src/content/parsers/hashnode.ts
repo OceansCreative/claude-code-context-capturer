@@ -42,12 +42,11 @@ import {
  */
 
 function isHashnodeHost(hostname: string): boolean {
-  return (
-    hostname === 'hashnode.dev' ||
-    hostname.endsWith('.hashnode.dev') ||
-    hostname === 'hashnode.com' ||
-    hostname.endsWith('.hashnode.com')
-  );
+  // Only blog SUBDOMAINS host posts (<name>.hashnode.dev, townhall.hashnode.com).
+  // The bare apex hashnode.com / hashnode.dev is the product/marketing/feed site —
+  // claiming it would mis-capture pages like hashnode.com/pricing as "articles",
+  // so the apex is deliberately left to the generic Readability fallback.
+  return hostname.endsWith('.hashnode.dev') || hostname.endsWith('.hashnode.com');
 }
 
 /**
