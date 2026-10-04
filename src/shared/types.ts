@@ -75,6 +75,8 @@ export type ParserName =
   | 'x'
   | 'notion'
   | 'arxiv'
+  | 'hatenablog'
+  | 'hatenabookmark'
   | 'generic'
   | 'selection';
 

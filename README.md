@@ -10,7 +10,7 @@
 
 # Claude Code Context Capturer
 
-> Capture web pages as Markdown and append them **directly to your project's context files** — `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, all at once. Multi-project routing by URL pattern. Site-specific parsers for GitHub, GitHub Gist, Stack Overflow, Hacker News, X/Twitter, Zenn, Qiita, MDN, YouTube, Reddit, ChatGPT, Gemini, Notion, arXiv, and claude.ai conversations.
+> Capture web pages as Markdown and append them **directly to your project's context files** — `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, all at once. Multi-project routing by URL pattern. Site-specific parsers for GitHub, GitHub Gist, Stack Overflow, Hacker News, X/Twitter, Zenn, Qiita, MDN, YouTube, Reddit, ChatGPT, Gemini, Notion, arXiv, Hatena, and claude.ai conversations.
 
 ![hero](docs/screenshots/03-hero.png)
 
@@ -70,6 +70,7 @@ I see the same.
   - **Gemini** *(v1.4.0+)* — gemini.google.com の `/app/<id>`（および `/share/<id>`）会話ページを抽出。claude.ai / ChatGPT と違い Gemini にはクリーンな JSON API がなく（難読化された `batchexecute` RPC のみ）、描画済み DOM を解析します。難読化クラス名ではなく Gemini の安定したセマンティック・カスタム要素（`conversation-container` / `user-query` / `model-response`）に依存。各ターンの user プロンプトと model 応答を保持、code は言語付きコードフェンス、リスト / テーブル / インライン code は共通 Markdown コンバータで再現、スクリーンリーダ用の重複テキスト（`cdk-visually-hidden`）はスキップ。同一会話の再キャプチャは上書き更新。ログアウト / 読み込み中はサインインを促すフレンドリーなエラー
   - **Notion** *(v1.4.0+)* — notion.so / notion.site のページを内部ブロック API（`/api/v3/loadPageChunk`、cursor でページング）経由で抽出（仮想化で未描画のブロックも取りこぼさない）。block ツリーを Markdown に変換：見出し（H1〜H3）/ 段落 / 箇条書き・番号付き・ToDo リスト（ネスト対応）/ コードブロック（言語付き）/ 引用 / コールアウト（アイコン付き）/ トグル / テーブル / 区切り線。inline の bold / italic / strike / code / link / 数式も復元。空ブロックはスキップ、API が不達・形式変更のときはレンダリング済み DOM（`.notion-page-content` / `data-block-id`）にフォールバック。ログアウト / 非公開 / 想定外の形式はフレンドリーなエラー、同一ページの再キャプチャは上書き更新
   - **arXiv** *(v1.5.0+)* — arxiv.org の `/abs/<id>` アブストラクトページ（`/pdf/<id>` はアブストラクトページ経由で同一論文として扱う）を静的な server-rendered HTML から抽出。難読化とは無縁の安定した `citation_*` メタタグ（title / authors / abstract / date / id）を主アンカーとし、無い場合は DOM（`h1.title` / `div.authors` / `blockquote.abstract`）へフォールバック。`# タイトル` + 著者行 + `## Abstract` + コンパクトなメタ情報ブロック（カテゴリ / バージョン付き arXiv id / 投稿日 / コメント / あれば journal reference と DOI / PDF・アブストラクトへのリンク）を生成。カテゴリ（`cs.CL` / `hep-ex` など）はタグ化、同一論文の別バージョンを再キャプチャすると上書き更新（dedupe キーは版を除去）。想定外のレイアウトは空キャプチャにせずフレンドリーなエラー
+  - **Hatena（はてな）** *(v1.6.0+)* — はてなの 2 つのサービスを 2 つの形で抽出。**はてなブログ**の記事（`*.hatenablog.com` / `.jp`、`*.hateblo.jp`、`*.hatenadiary.com` / `.jp` の `/entry/…` 固定リンク）は Zenn / Qiita と同様に、タイトル / ブログ名・著者 / 公開日 / カテゴリ（タグ化）と本文をクリーンな Markdown で取得。**はてなブックマーク**のエントリーページ（`b.hatena.ne.jp/entry/…`）は軽量なディスカッションとして、ブックマーク対象ページのタイトル + URL（エントリー URL から直接デコード）と公開コメント一覧（ユーザー · 日付 · ★スター、タグ付き、最大 100 件）を取得。どちらも描画済み DOM のみ（内部 API 不使用）、再キャプチャは上書き更新、一覧 / トップページは generic にフォールバック、コンテンツが取れないときは空キャプチャにせずフレンドリーなエラー。独自ドメインのはてなブログはホストから判別できないため generic（Readability）にフォールバック
   - その他のサイトは Mozilla Readability で本文抽出
 - **メタ情報の埋め込み**：URL・タイトル・取得日時を YAML frontmatter で付与
 - **CLAUDE.md への直書き** *(v0.2.0+)*：プロジェクトの `CLAUDE.md` を一度ピックすれば、以降のキャプチャは File System Access API 経由で自動 append。コピペ不要
@@ -107,7 +108,7 @@ I see the same.
 | クリップボードに出力 | ✓ | ✓ | ✓ | ✓ |
 | **プロジェクトの実ファイル `CLAUDE.md` に直接書き込み** | ✗ | ✗（独自 Vault） | ✗ | **✓** |
 | **URL パターンで複数ファイルに振り分け** | ✗ | ✗ | ✗ | **✓** |
-| GitHub / Gist / Stack Overflow / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit / ChatGPT / Gemini / Notion / arXiv サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
+| GitHub / Gist / Stack Overflow / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit / ChatGPT / Gemini / Notion / arXiv / Hatena サイト別パーサー | ✗ | 部分的 | ✗ | **✓** |
 | **claude.ai 会話キャプチャ（thinking / tool_use / branch 保持）** | ✗ | ✗ | ✗ | **✓** |
 | 100% ローカル処理・完全 OSS | ✓ | ✗（SaaS） | ✓ | ✓ |
 
@@ -266,7 +267,7 @@ Honestly, several Web→Markdown extensions already exist: **[LLMFeeder](https:/
 | Clipboard output | ✓ | ✓ | ✓ | ✓ |
 | **Direct write to your project's `CLAUDE.md`** | ✗ | ✗ (own vault) | ✗ | **✓** |
 | **URL-pattern routing to multiple files** | ✗ | ✗ | ✗ | **✓** |
-| Site-specific parsers (GitHub / Gist / SO / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit / ChatGPT / Gemini / Notion / arXiv) | ✗ | partial | ✗ | **✓** |
+| Site-specific parsers (GitHub / Gist / SO / HN / X(Twitter) / Zenn / Qiita / MDN / YouTube / Reddit / ChatGPT / Gemini / Notion / arXiv / Hatena) | ✗ | partial | ✗ | **✓** |
 | **claude.ai conversation capture (thinking / tool_use / branches preserved)** | ✗ | ✗ | ✗ | **✓** |
 | 100% local, fully OSS | ✓ | ✗ (SaaS) | ✓ | ✓ |
 
@@ -285,6 +286,7 @@ In short: a clipper purpose-built for AI agent context files. If you want a gene
 - **Gemini conversation capture** *(v1.4.0+)* — captures a gemini.google.com `/app/<id>` (or `/share/<id>`) conversation. Unlike claude.ai and ChatGPT, Gemini exposes no clean JSON API — only Google's obfuscated `batchexecute` RPC — so this reads the rendered DOM instead, anchored on Gemini's stable *semantic* custom elements (`conversation-container`, `user-query`, `model-response`), never obfuscated class names. Each turn's user prompt and model response are preserved, code blocks keep their language as fenced blocks, and lists / tables / inline code survive through the shared Markdown converter. Screen-reader-only duplicate text (`cdk-visually-hidden`) is stripped, and re-capturing the same conversation updates it in place. Logged out or still loading? A friendly hint tells you to sign in and retry
 - **Notion page capture** *(v1.4.0+)* — captures a notion.so / notion.site page via Notion's internal block API (`/api/v3/loadPageChunk`, cursor-paginated) instead of the virtualized DOM, so off-screen blocks aren't lost. Converts the block tree to Markdown: headings (H1–H3), paragraphs, bulleted / numbered / to-do lists (nested), code blocks (with language), quotes, callouts (with icon), toggles, tables, and dividers — plus inline bold / italic / strike / code / links / equations. Empty blocks are skipped; if the API is unreachable or its shape changed it falls back to a DOM parse (`.notion-page-content` + `data-block-id`). Logged-out / private / unexpected-shape pages surface a friendly error, and re-capturing the same page updates it in place
 - **arXiv paper capture** *(v1.5.0+)* — captures an `arxiv.org/abs/<id>` abstract page (and `/pdf/<id>` via its abstract page) straight from the static, server-rendered HTML, anchored on arXiv's stable `citation_*` meta tags (title / authors / abstract / date / id) with a DOM fallback (`h1.title`, `div.authors`, `blockquote.abstract`). Produces a clean `# title`, an authors line, a `## Abstract` section, and a compact metadata block: categories, the versioned arXiv id, submission dates, author comments, the journal reference and DOI when present, and PDF + abstract-page links. Categories become tags (`cs.CL`, `hep-ex`, …), and re-capturing a new version of the same paper updates it in place (the dedupe key is version-stripped). Handles new-style (`1706.03762`) and old-style (`hep-ph/9901001`) ids; an unexpected layout surfaces a friendly error instead of an empty capture
+- **Hatena capture** *(v1.6.0+)* — two shapes across Hatena's two properties. **Hatena Blog** articles (on `*.hatenablog.com` / `.jp`, `*.hateblo.jp`, `*.hatenadiary.com` / `.jp`, on an `/entry/…` permalink) are captured like Zenn / Qiita: title, blog name / author, published date, categories (as tags), and the body as clean Markdown. **Hatena Bookmark** entry pages (`b.hatena.ne.jp/entry/…`) are captured as a lightweight discussion — the bookmarked page's title + URL (decoded straight from the entry URL) plus the public user comments (user · date · ★stars, with tags), capped at 100. Both read the server-rendered DOM only (no internal-API calls), re-capture updates in place, listing / home pages fall through to generic, and missing content surfaces a friendly error instead of an empty capture. Custom-domain Hatena blogs can't be told apart by host, so they fall through to generic Readability by design
 - **YAML frontmatter** with URL, title, captured_at, author, tags
 - **Direct CLAUDE.md write** *(v0.2.0+)* — Link a `CLAUDE.md` once via the File System Access API; subsequent captures append directly, no copy/paste
 - **Multi-project routing** *(v0.3.0+)* — Link multiple `CLAUDE.md` files with URL glob patterns. Captures from `github.com/anthropic/*` go to one file, `zenn.dev/*` to another, unmatched URLs to a default route

@@ -13,6 +13,12 @@ import { canHandleHackerNews, parseHackerNews } from './hackernews';
 import { canHandleX, parseX } from './x';
 import { canHandleNotion, parseNotion } from './notion';
 import { canHandleArxiv, parseArxiv } from './arxiv';
+import {
+  canHandleHatenaBlog,
+  parseHatenaBlog,
+  canHandleHatenaBookmark,
+  parseHatenaBookmark,
+} from './hatena';
 import { parseGenericPage } from './generic';
 import type { CaptureOptions, CapturedContext } from '@/shared/types';
 
@@ -48,6 +54,13 @@ export async function dispatchPageParser(
   // arXiv only claims /abs/<id> and /pdf/<id> paper pages — listing, search,
   // and the homepage fall through to generic.
   if (canHandleArxiv()) return parseArxiv(options);
+  // Hatena Bookmark only claims b.hatena.ne.jp /entry/ pages — the hotentry /
+  // entrylist / user / tag listing pages fall through to generic.
+  if (canHandleHatenaBookmark()) return parseHatenaBookmark();
+  // Hatena Blog only claims /entry/ article permalinks on Hatena's own blog
+  // hosts — the blog index and archive listings fall through to generic, and
+  // custom-domain blogs aren't auto-detectable so they do too.
+  if (canHandleHatenaBlog()) return parseHatenaBlog();
   // Gist lives on its own host (gist.github.com), separate from github.com —
   // a single-gist page with a `/<user>/<id>` path; the discover/home pages fall
   // through to generic.
