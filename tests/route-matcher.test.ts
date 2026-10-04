@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { matchesPattern, resolveRoute } from '@/shared/route-matcher';
+import {
+  matchesPattern,
+  resolveRoute,
+  resolveTargetRoute,
+} from '@/shared/route-matcher';
 import type { ClaudeMdRoute } from '@/shared/types';
 
 function route(p: Partial<ClaudeMdRoute>): ClaudeMdRoute {
@@ -64,5 +68,55 @@ describe('resolveRoute', () => {
 
   it('returns undefined for an empty route list', () => {
     expect(resolveRoute('https://anywhere', [])).toBeUndefined();
+  });
+});
+
+describe('resolveTargetRoute (per-capture override)', () => {
+  const r1 = route({ id: 'r1', pattern: 'github.com/anthropic/*' });
+  const r2 = route({ id: 'r2', pattern: 'zenn.dev/*' });
+  const def = route({ id: 'rd', pattern: '', isDefault: true });
+  const routes = [r1, r2, def];
+
+  it('an explicit id wins over what the URL would have matched', () => {
+    // URL matches r1, but the user picked r2 in the popup.
+    expect(resolveTargetRoute('r2', 'https://github.com/anthropic/x', routes)?.id).toBe(
+      'r2'
+    );
+  });
+
+  it('an explicit id can target the default route even when a pattern matches', () => {
+    expect(resolveTargetRoute('rd', 'https://github.com/anthropic/x', routes)?.id).toBe(
+      'rd'
+    );
+  });
+
+  it('falls back to resolveRoute when the id is empty ("Auto")', () => {
+    expect(resolveTargetRoute('', 'https://github.com/anthropic/x', routes)?.id).toBe(
+      'r1'
+    );
+    expect(resolveTargetRoute('', 'https://example.com/other', routes)?.id).toBe('rd');
+  });
+
+  it('treats null / undefined the same as "Auto"', () => {
+    expect(resolveTargetRoute(undefined, 'https://zenn.dev/foo', routes)?.id).toBe('r2');
+    expect(resolveTargetRoute(null, 'https://zenn.dev/foo', routes)?.id).toBe('r2');
+  });
+
+  it('falls back to auto resolution when the id is stale / unknown', () => {
+    // A route the popup remembered but that has since been deleted must not
+    // strand the capture — resolve by URL instead.
+    expect(
+      resolveTargetRoute('deleted-id', 'https://github.com/anthropic/x', routes)?.id
+    ).toBe('r1');
+  });
+
+  it('a stale id with no URL match still yields the default route', () => {
+    expect(
+      resolveTargetRoute('deleted-id', 'https://nowhere.example', routes)?.id
+    ).toBe('rd');
+  });
+
+  it('a stale id with neither match nor default resolves to undefined', () => {
+    expect(resolveTargetRoute('deleted-id', 'https://nowhere.example', [r1, r2])).toBeUndefined();
   });
 });

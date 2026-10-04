@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { RuntimeMessage, UserOptions } from '@/shared/types';
+import type { ClaudeMdRoute, RuntimeMessage, UserOptions } from '@/shared/types';
 import { readBuffer, type BufferEntry } from '@/shared/buffer-storage';
+import { listRoutes } from '@/shared/handle-store';
 import { loadOptions, saveOptions } from '@/shared/options-storage';
 import {
   selectRecentCaptures,
@@ -12,6 +13,35 @@ import { t } from '@/shared/i18n';
 /** How many recent captures the popup surfaces. */
 const RECENT_LIMIT = 5;
 
+/**
+ * localStorage key remembering the last per-capture route override. Purely a
+ * per-viewer convenience — the authoritative routing still happens in the
+ * service worker, and a stale/removed id degrades gracefully to "Auto".
+ */
+const ROUTE_OVERRIDE_KEY = 'ccc.popup.routeOverride';
+
+/** Sentinel for the "Auto (match by URL)" selection — send no override. */
+const AUTO_ROUTE = '';
+
+/** Read the remembered override id; defensive against disabled storage. */
+function readStoredRouteOverride(): string {
+  try {
+    return localStorage.getItem(ROUTE_OVERRIDE_KEY) ?? AUTO_ROUTE;
+  } catch {
+    return AUTO_ROUTE;
+  }
+}
+
+/** Persist (or clear) the remembered override id; best-effort. */
+function storeRouteOverride(value: string): void {
+  try {
+    if (value === AUTO_ROUTE) localStorage.removeItem(ROUTE_OVERRIDE_KEY);
+    else localStorage.setItem(ROUTE_OVERRIDE_KEY, value);
+  } catch {
+    // Ignore — the override just won't be remembered next time.
+  }
+}
+
 type Status = 'idle' | 'capturing' | 'success' | 'preview-pending' | 'error';
 
 export default function App() {
@@ -19,6 +49,10 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [buffer, setBuffer] = useState<BufferEntry[]>([]);
   const [options, setOptions] = useState<UserOptions | null>(null);
+  const [routes, setRoutes] = useState<ClaudeMdRoute[]>([]);
+  // Per-capture route override ('' = Auto). Seeded from localStorage; validated
+  // against the loaded routes once they arrive.
+  const [routeOverride, setRouteOverride] = useState<string>(readStoredRouteOverride);
   const [isClaudeAi, setIsClaudeAi] = useState(false);
   // Transient per-row feedback for the re-copy button.
   const [copyFeedback, setCopyFeedback] = useState<{
@@ -29,12 +63,28 @@ export default function App() {
   useEffect(() => {
     void refreshBuffer();
     void loadOptions().then(setOptions);
+    void loadRoutes();
     void detectClaudeAi();
   }, []);
 
   async function refreshBuffer() {
     const entries = await readBuffer();
     setBuffer(entries);
+  }
+
+  async function loadRoutes() {
+    const list = await listRoutes();
+    setRoutes(list);
+    // Drop a remembered override that points at a route that no longer exists,
+    // so the selector shows "Auto" instead of a blank/phantom choice.
+    setRouteOverride((cur) =>
+      cur !== AUTO_ROUTE && !list.some((r) => r.id === cur) ? AUTO_ROUTE : cur
+    );
+  }
+
+  function changeRouteOverride(value: string) {
+    setRouteOverride(value);
+    storeRouteOverride(value);
   }
 
   async function detectClaudeAi() {
@@ -62,7 +112,13 @@ export default function App() {
     setStatus('capturing');
     setErrorMessage(null);
     try {
-      const response = (await chrome.runtime.sendMessage({ type })) as RuntimeMessage;
+      // Only send the override when it's active AND meaningful for this capture
+      // (claude-md mode with a chosen route). Otherwise the SW auto-resolves.
+      const routeId = showRouteSelector && routeOverride ? routeOverride : undefined;
+      const response = (await chrome.runtime.sendMessage({
+        type,
+        ...(routeId ? { routeId } : {}),
+      })) as RuntimeMessage;
       if (response.type === 'CAPTURE_ERROR') {
         setErrorMessage(response.error);
         setStatus('error');
@@ -117,6 +173,12 @@ export default function App() {
     formatCaptureRow(entry, now, uiLocale)
   );
 
+  // The per-capture route override only makes sense when captures land in a
+  // context file AND there's more than one route to choose between. Otherwise
+  // routing is unambiguous, so we don't clutter the popup.
+  const showRouteSelector =
+    options?.defaultMode === 'claude-md' && routes.length > 1;
+
   return (
     <div className="w-[340px] p-4 font-sans">
       <header className="mb-4 flex items-center justify-between">
@@ -151,6 +213,31 @@ export default function App() {
           {t('captureSelection')}
         </button>
       </div>
+
+      {showRouteSelector && (
+        <section className="mt-3">
+          <label className="block text-xs text-slate-700">
+            <span className="mb-1 flex items-center gap-1 font-medium">
+              <span aria-hidden>→</span> {t('routeOverrideLabel')}
+            </span>
+            <select
+              value={routeOverride}
+              onChange={(e) => changeRouteOverride(e.target.value)}
+              className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-900 focus:border-slate-400 focus:outline-none"
+            >
+              <option value={AUTO_ROUTE}>{t('routeOverrideAuto')}</option>
+              {routes.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-[10px] text-slate-500">
+              {t('routeOverrideHint')}
+            </span>
+          </label>
+        </section>
+      )}
 
       {isClaudeAi && options && (
         <section className="mt-3 rounded border border-violet-200 bg-violet-50 p-2.5">

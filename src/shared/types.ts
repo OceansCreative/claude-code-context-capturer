@@ -155,8 +155,8 @@ export const DEFAULT_OPTIONS: UserOptions = {
 
 /** Messages exchanged between background and content scripts. */
 export type RuntimeMessage =
-  | { type: 'CAPTURE_PAGE'; options?: CaptureOptions }
-  | { type: 'CAPTURE_SELECTION'; options?: CaptureOptions }
+  | { type: 'CAPTURE_PAGE'; options?: CaptureOptions; routeId?: string }
+  | { type: 'CAPTURE_SELECTION'; options?: CaptureOptions; routeId?: string }
   | { type: 'CAPTURE_RESULT'; payload: CapturedContext }
   /** Capture succeeded but is now waiting in a preview window for the user. */
   | { type: 'CAPTURE_PENDING_PREVIEW'; payload: CapturedContext }
@@ -190,6 +190,13 @@ export interface StagedCapture {
   options: UserOptions;
   tabId: number;
   stagedAt: string;
+  /**
+   * Per-capture route override chosen in the popup (claude-md output mode). When
+   * set, delivery writes to this route instead of the URL-matched one; unset or
+   * stale → the normal auto resolution applies. Stashed here so the override
+   * survives the preview round-trip (stage → PREVIEW_CONFIRM → deliver).
+   */
+  routeId?: string;
 }
 
 /**

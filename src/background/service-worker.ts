@@ -3,7 +3,7 @@ import { loadOptions, saveOptions, markCaptured } from '@/shared/options-storage
 import { appendToBuffer, readBuffer } from '@/shared/buffer-storage';
 import { buildEntryHeading } from '@/shared/file-appender';
 import { listRoutes } from '@/shared/handle-store';
-import { resolveRoute } from '@/shared/route-matcher';
+import { resolveTargetRoute } from '@/shared/route-matcher';
 import {
   stageCapture,
   loadStagedCapture,
@@ -113,7 +113,8 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResp
           message.editedMarkdown,
           staged.payload,
           staged.options,
-          staged.tabId
+          staged.tabId,
+          staged.routeId
         );
         await notifyDelivery(outcome);
         await removeStagedCapture(message.stageId);
@@ -158,7 +159,7 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResp
         sendResponse({ type: 'CAPTURE_ERROR', error: 'No active tab.' });
         return;
       }
-      const result = await requestCapture(tab.id, message.type);
+      const result = await requestCapture(tab.id, message.type, message.routeId);
       sendResponse(result);
     })();
     return true; // keep the message channel open for async response
@@ -172,7 +173,8 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResp
 
 async function requestCapture(
   tabId: number,
-  type: 'CAPTURE_PAGE' | 'CAPTURE_SELECTION'
+  type: 'CAPTURE_PAGE' | 'CAPTURE_SELECTION',
+  explicitRouteId?: string
 ): Promise<RuntimeMessage> {
   try {
     const options = await loadOptions();
@@ -203,17 +205,25 @@ async function requestCapture(
     if (options.previewBeforeWrite) {
       // Stage and surface the preview window. The user reviews, possibly
       // edits, then Confirm re-enters deliver via the PREVIEW_CONFIRM handler.
+      // Carry the per-capture route override along so it survives that round-trip.
       const stageId = await stageCapture(
         response.payload,
         finalMarkdown,
         options,
-        tabId
+        tabId,
+        explicitRouteId
       );
       await openPreviewWindow(stageId);
       return { type: 'CAPTURE_PENDING_PREVIEW', payload: response.payload };
     }
 
-    const outcome = await deliver(finalMarkdown, response.payload, options, tabId);
+    const outcome = await deliver(
+      finalMarkdown,
+      response.payload,
+      options,
+      tabId,
+      explicitRouteId
+    );
     await notifyDelivery(outcome);
 
     return { type: 'CAPTURE_RESULT', payload: response.payload };
@@ -263,7 +273,8 @@ async function deliver(
   markdown: string,
   ctx: CapturedContext,
   options: UserOptions,
-  _tabId: number
+  _tabId: number,
+  explicitRouteId?: string
 ): Promise<DeliveryOutcome> {
   if (options.defaultMode === 'clipboard' || options.defaultMode === 'both') {
     await writeToClipboardViaOffscreen(markdown);
@@ -272,7 +283,7 @@ async function deliver(
     await appendToBuffer(ctx, markdown);
   }
   if (options.defaultMode === 'claude-md') {
-    return await appendToClaudeMd(ctx, markdown);
+    return await appendToClaudeMd(ctx, markdown, explicitRouteId);
   }
   if (options.defaultMode === 'mcp-store') {
     await writeToMcpStore(ctx, markdown);
@@ -348,13 +359,16 @@ async function writeToMcpStore(
  */
 async function appendToClaudeMd(
   ctx: CapturedContext,
-  markdown: string
+  markdown: string,
+  explicitRouteId?: string
 ): Promise<DeliveryOutcome> {
   const routes = await listRoutes();
   if (routes.length === 0) {
     throw new Error('no-route: No CLAUDE.md is linked. Configure routes in settings.');
   }
-  const route = resolveRoute(ctx.url, routes);
+  // An explicit routeId from the popup's per-capture override wins; a falsy or
+  // stale id falls back to URL-pattern matching (resolveRoute).
+  const route = resolveTargetRoute(explicitRouteId, ctx.url, routes);
   if (!route) {
     throw new Error(
       `no-route: No route matches ${ctx.url}. Add a matching pattern or set a default route in settings.`

@@ -19,7 +19,8 @@ export async function stageCapture(
   payload: CapturedContext,
   finalMarkdown: string,
   options: UserOptions,
-  tabId: number
+  tabId: number,
+  routeId?: string
 ): Promise<string> {
   const id = crypto.randomUUID();
   const staged: StagedCapture = {
@@ -29,6 +30,7 @@ export async function stageCapture(
     options,
     tabId,
     stagedAt: new Date().toISOString(),
+    ...(routeId ? { routeId } : {}),
   };
   await chrome.storage.session.set({ [PREFIX + id]: staged });
   return id;
